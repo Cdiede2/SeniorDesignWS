@@ -12,7 +12,7 @@ find_package(OpenSSL REQUIRED)
 find_package(OpenCV REQUIRED)
 
 # Add source files
-add_executable(Vision_Camera src/main.cpp src/md5.cpp)
+add_executable(Vision_Camera src/main.cpp src/md5.cpp src/shannon-fano.cpp)
 
 # Include directories
 # target_include_directories(ProjectName PUBLIC include)
