@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 
     // Draw a circle in the center of the image
     cv::imshow("OpenCV Example", output_img);
-    cv::imwrite("cursed-2.jpg", output_img);
+    // fcv::imwrite("cursed-2.jpg", output_img);
     
     // Wait for a key press indefinitely
     cv::waitKey(0);
