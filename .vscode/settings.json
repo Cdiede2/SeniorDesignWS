@@ -65,5 +65,11 @@
         "stop_token": "cpp",
         "thread": "cpp"
     },
-    "editor.experimentalGpuAcceleration": "off"
+    "editor.experimentalGpuAcceleration": "off",
+    "github.copilot.enable": {
+        "*": false,
+        "plaintext": false,
+        "markdown": false,
+        "scminput": false
+    }
 }

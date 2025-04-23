@@ -87,9 +87,11 @@ TEST(SFComp, SFComp_INIT) {
 TEST(SFComp, SFComp_Empty) {
     ShannonFano sf;
     std::map<char, double> frequencies;
-    sf.buildCodes(frequencies, "");
+    EXPECT_ANY_THROW(sf.buildCodes(frequencies, ""));
+    // sf.buildCodes(frequencies, "");
     EXPECT_TRUE(frequencies.empty());
 }
+
 TEST(SFComp, SFComp_SingleChar) {
     ShannonFano sf;
     std::map<char, double> frequencies;
@@ -98,6 +100,11 @@ TEST(SFComp, SFComp_SingleChar) {
     EXPECT_EQ(frequencies['a'], 1.0);
 }
 
+
+
+
+
+/* Utility Functions */
 std::string convertHashToString(const uint8_t* digest) {
     std::string result;
     for (int i = 0; i < 16; ++i) {

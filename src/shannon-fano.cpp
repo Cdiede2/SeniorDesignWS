@@ -16,6 +16,12 @@ ShannonFano::ShannonFano(const std::map<char, double> &frequencies) : frequencie
 void ShannonFano::buildCodes( std::map<char, double> &freqs, const std::string &input ) {
     size_t size = input.size();
 
+
+    if ( ! input.size() ) {
+        std::cerr << "Input string is empty." << std::endl;
+        throw std::invalid_argument("Input string is empty.");
+    }
+
     // Count Frequencies
     for( char c : input ) {
         freqs[c] += 1;
