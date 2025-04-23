@@ -23,6 +23,12 @@ enum numbers
     RETURN_NETWORK_ERR
 };
 
+struct CamHeader {
+    uint8_t protocol;
+    uint8_t flags;  // (S)tart || (R)esponse || (E)nd || Unused...
+    uint16_t size;
+};
+
 int main(int argc, char **argv)
 {
     const char *server_ip = "127.0.0.1";
@@ -48,6 +54,7 @@ int main(int argc, char **argv)
 
         recv(client_socket, buffer, sizeof(buffer), 0);
         std::cout << std::format("Client Sent: {}", buffer) << std::endl;
+
     }
     catch (std::exception &err)
     {
