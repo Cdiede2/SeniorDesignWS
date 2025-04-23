@@ -13,16 +13,19 @@ find_package(OpenCV REQUIRED)
 
 # Add source files
 add_executable(CamServer src/server.cpp src/shannon-fano.cpp)
+add_executable(CamClient src/client.cpp)
 add_executable(Test_Pkg src/test.cpp src/shannon-fano.cpp)
 
 
-# Include directories: Vision Camera
+# Include Directories: Camera Server
 target_include_directories(CamServer PRIVATE include)
 target_include_directories(CamServer PRIVATE ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(CamServer PRIVATE OpenSSL::Crypto ${OpenCV_LIBS})
 
+# Include Directories: Camera Client
+target_include_directories(CamClient PRIVATE include)
 
-# Include directories: Test Package
+# Include Directories: Test Package
 target_include_directories(Test_Pkg PRIVATE include)
 target_include_directories(Test_Pkg PRIVATE ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(Test_Pkg PRIVATE OpenSSL::Crypto ${OpenCV_LIBS} gtest gtest_main)
