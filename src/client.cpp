@@ -6,17 +6,29 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
+#include "camera.h"
+
 enum numbers
 {
     RETURN_OK,
     RETURN_NETWORK_ERR
 };
 
-struct CamHeader {
-    uint8_t protocol;
-    uint8_t flags;  // (S)tart || (R)esponse || (E)nd || Unused...
-    uint16_t size;
-};
+/** TODO List: Client
+ *  TODO: Create Finite State Machine to keep track of which stage application is in
+ *      *   TODO: Idle Stage
+ *      *   TODO: Connect to server
+ *      *   TODO: Retrieve Image
+ *      *       * TODO: Request image
+ *      *       * TODO: Receive image
+ *      *       * TODO: Reconstruct image
+ *      *       * TODO: Validate image
+ *      *   TODO: Reset Stage
+ *  TODO: Idle Stage, wait for call from user
+ *  TODO: Connect to Server
+ *  TODO: Retrieve Image
+ *  TODO: Reset Stage
+ */
 
 int main(int argc, char **argv)
 {
@@ -46,7 +58,6 @@ int main(int argc, char **argv)
     }
     catch (std::exception &e)
     {
-
         std::cerr << "Error: " << e.what() << std::endl;
         return RETURN_NETWORK_ERR;
     }

@@ -14,8 +14,7 @@
 #include <unistd.h>
 
 // #include "shannon-fano.h"
-
-// reinterpret_cast<int*>(0x00000000);
+#include "camera.h" // Split and Strip functions
 
 enum numbers
 {
@@ -23,11 +22,33 @@ enum numbers
     RETURN_NETWORK_ERR
 };
 
-struct CamHeader {
-    uint8_t protocol;
-    uint8_t flags;  // (S)tart || (R)esponse || (E)nd || Unused...
-    uint16_t size;
-};
+/** TODO List: Server
+ *  TODO: Create Finite State Machine to keep track of which stage application is in
+ *      *   TODO: Listening Stage
+ *      *   TODO: Transmitting Stage
+ *      *   TODO: Reset Stage
+ * 
+ *  TODO: Listening Stage
+ *      *   TODO: Possibly use threading to support multiple connections simultaneously
+ *      *   TODO: Listen for TCP Connection on port 39554, initiating connection
+ *      *       * TODO: Client connected, send HEADER + message indicating as such
+ *      *       * TODO: Trigger Client to enter Listening Stage Using Listen flag
+ * 
+ *  TODO: Transmitting Stage
+ *      *   TODO: Read single image in from attached camera, store in VAR
+ *      *   TODO: Process VAR
+ *      *       * TODO: Apply Bilateral Gaussian Filter to VAR to create PROC_VAR
+ *      *       * TODO: Apply MD5 Hashing Function to PROC_VAR, store in GLOBAL_HASH
+ *      *       * TODO: Send Global Hash
+ *      *       * TODO: Use 'color matrices' to "filter" image intro respective frames
+ *      *       *       * TODO: Compute FRAME_N Hash
+ *      *       *       * TODO: Compute FRAME_N SF_Table, Send over TCP with flag 
+ *      *       *       * TODO: Transmit hash and SF encoded FRAME_N over UDP
+ *      *       *       * TODO: Repeat for each in N frames
+ * 
+ *  TODO: Reset Stage
+ *      *   TODO: 
+ */
 
 int main(int argc, char **argv)
 {
@@ -45,6 +66,7 @@ int main(int argc, char **argv)
     {
         int client_socket;
         char buffer[1024] = {0};
+        std::vector<std::string> header_vector;
 
         bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
@@ -53,8 +75,14 @@ int main(int argc, char **argv)
         client_socket = accept(sockfd, nullptr, nullptr);
 
         recv(client_socket, buffer, sizeof(buffer), 0);
-        std::cout << std::format("Client Sent: {}", buffer) << std::endl;
 
+        // Split and Read Values Sent by Client
+        header_vector = split({buffer}, '/');
+        std::cout << "Index 0: " << header_vector.at(0) << std::endl;
+        std::cout << "Index 1: " << header_vector.at(1) << std::endl;
+        std::cout << "Index 2: " << header_vector.at(2) << std::endl;
+
+        // std::cout << std::format("Client Sent: {}", buffer) << std::endl;
     }
     catch (std::exception &err)
     {

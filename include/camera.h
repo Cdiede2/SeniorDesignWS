@@ -1,3 +1,5 @@
+
+
 #pragma once
 #define CAMERA_H
 
@@ -5,6 +7,29 @@
 #include <vector>
 #include <string>
 
+/**
+ * @brief Struct containing elements of a header
+ * @param protocol Unused for now, default set to 0
+ * @param flags Stores flags as indicators between server and client
+ * @param seq_num Sequence number of header
+ * @param size Size of following payload, used to allocate buffer size prior to transmission
+ */
+struct CamHeader {
+    uint8_t protocol;
+    uint8_t flags;  // (S)tart || (L)isten  ||  (SE)t Encode || (R)esponse || (E)nd || Unused...
+    uint16_t seq_num;
+    uint32_t size;
+};
+
+/**
+ * @brief Removes leading and trailing characters from a string based on a set of delimiters.
+ * @param input The input string to be stripped.
+ * @param delims A string containing the characters to be removed from the beginning and end of the input string.
+ * @return A new string with the specified characters removed from both ends.
+ * @details This function iterates over the input string to identify and remove any characters 
+ * specified in the `delims` parameter from the start and end of the string. If the input string 
+ * is empty, it returns an empty string. The function preserves the order of the remaining characters.
+ */
 std::string strip(const std::string &input, const std::string delims)
 {
     std::string::const_iterator left = input.cbegin();
@@ -31,6 +56,17 @@ std::string strip(const std::string &input, const std::string delims)
     return result;
 }
 
+
+/**
+ * @brief Splits a string into a vector of substrings based on a delimiter character.
+ * @param input The input string to be split.
+ * @param delim The delimiter character used to split the string.
+ * @return A vector of substrings obtained by splitting the input string.
+ * @details This function first removes leading and trailing occurrences of the delimiter 
+ * from the input string using the `strip` function. It then iteratively finds the delimiter 
+ * within the string and extracts substrings between occurrences of the delimiter. 
+ * The resulting substrings are stored in a vector, which is returned as the output.
+ */
 std::vector<std::string> split(const std::string &input, char delim)
 {
     std::string workingStr = strip(input, {delim});
