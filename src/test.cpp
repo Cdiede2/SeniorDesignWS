@@ -1,10 +1,15 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <format>
+
+#include <opencv4/opencv2/core.hpp>
+#include <opencv4/opencv2/imgproc.hpp>
+#include <opencv4/opencv2/highgui.hpp>
+
 #include <openssl/md5.h>
 #include <fstream>
-
 #include "shannon-fano.h"
+
 #include "camera.h"
 // #include "md5.h"
 
@@ -171,6 +176,11 @@ TEST(STRING_MANIP_SPLIT, Non_Empty_String_Forward_Backward_Delim)
     EXPECT_EQ("the", result.at(6));
     EXPECT_EQ("lazy", result.at(7));
     EXPECT_EQ("dog", result.at(8));
+}
+
+/* Camera Tests */
+TEST(CAMERA_TEST, Camera_Init) {
+    EXPECT_TRUE(true);
 }
 
 

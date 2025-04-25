@@ -82,6 +82,7 @@ int main(int argc, char **argv)
         std::cout << "Index 1: " << header_vector.at(1) << std::endl;
         std::cout << "Index 2: " << header_vector.at(2) << std::endl;
 
+        send(client_socket, "hello", 6, 0);
         // std::cout << std::format("Client Sent: {}", buffer) << std::endl;
     }
     catch (std::exception &err)

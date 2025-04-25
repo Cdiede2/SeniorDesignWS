@@ -32,6 +32,7 @@ enum numbers
 
 int main(int argc, char **argv)
 {
+    char* buffer[1024];
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     sockaddr_in serverAddr{
         AF_INET,
@@ -54,6 +55,9 @@ int main(int argc, char **argv)
         // Send Header
         // send(clientSocket, reinterpret_cast<const char *>("Hello World!"), 13, 0);
         send(clientSocket, message.c_str(), message.size(), 0 );
+        recv(clientSocket, buffer, sizeof(buffer), 0);
+        std::cout << std::format("I received {}", buffer) << std::endl;
+
         close(clientSocket);
     }
     catch (std::exception &e)
