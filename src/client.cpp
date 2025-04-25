@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 
     CamHeader header{
         0,
-        0x00,
+        0x80,
         64
     };
 
@@ -56,8 +56,8 @@ int main(int argc, char **argv)
         // send(clientSocket, reinterpret_cast<const char *>("Hello World!"), 13, 0);
         send(clientSocket, message.c_str(), message.size(), 0 );
         recv(clientSocket, buffer, sizeof(buffer), 0);
-        std::cout << std::format("I received {}", buffer) << std::endl;
-
+        std::cout << std::format("I received {}", reinterpret_cast<const char*>(buffer)) << std::endl;
+        // std::cout << std::format("Val: {}", "hello") << std::endl;
         close(clientSocket);
     }
     catch (std::exception &e)

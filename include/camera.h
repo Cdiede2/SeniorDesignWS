@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include <iomanip>
 
 /**
  * @brief Struct containing elements of a header
@@ -86,6 +87,36 @@ std::vector<std::string> split(const std::string &input, char delim)
         pos = next;
     }
     return strVec;
+}
+
+
+/**
+ * @brief Parses a header string into a CamHeader structure.
+ * @param header The header string to be parsed.
+ * @return A CamHeader structure containing the parsed values.
+ * @details This function splits the input header string using the '/' delimiter and 
+ * assigns the parsed values to the corresponding fields in the CamHeader structure. 
+ * It throws an exception if the header format is invalid or if the number of fields is incorrect.
+ */
+CamHeader parseHeader(const std::string &header)
+{
+    CamHeader camHeader;
+    std::vector<std::string> headerVector = split(header, '/');
+
+    if (headerVector.size() != 3)
+    {
+        throw std::invalid_argument("Invalid header format");
+    }
+
+    camHeader.protocol = std::stoi(headerVector[0]);
+    camHeader.flags = std::stoi(headerVector[1], nullptr, 16);
+    camHeader.seq_num = std::stoi(headerVector[2]);
+
+    if (camHeader.flags > 0xFF)
+    {
+        throw std::invalid_argument("Invalid flags value");
+    }
+    return camHeader;
 }
 
 // class Pixel

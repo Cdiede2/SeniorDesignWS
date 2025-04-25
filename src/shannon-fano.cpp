@@ -10,8 +10,27 @@ ShannonFano::ShannonFano(const std::map<char, double> &frequencies) : frequencie
     return;
 }
 
+void ShannonFano::encode() {
 
+}
 
+void ShannonFano::decode(const std::string &encoded) {
+    std::string decoded;
+    std::string currentCode;
+
+    for( char c : encoded ) {
+        currentCode += c;
+        if( this->reverseCodes.find(currentCode) != this->reverseCodes.end() ) {
+            decoded += this->reverseCodes[currentCode];
+            currentCode = "";
+        }
+    }
+    std::cout << "Decoded: " << decoded << std::endl;
+}
+
+std::map<char, std::string> ShannonFano::getCodes() const {
+    return this->codes;
+}
 
 void ShannonFano::buildCodes( std::map<char, double> &freqs, const std::string &input ) {
     size_t size = input.size();
@@ -43,14 +62,12 @@ void ShannonFano::buildCodes( std::map<char, double> &freqs, const std::string &
 
     
     for(  auto &pair : freqVec ) {
-        std::cout << std::format("{}\t|\t{:.2f}\t|\t{:.2f}\t|\t{}", pair.first, pair.second, -std::ceil( std::log2(pair.second)), this->codes[pair.first]) << std::endl;
+        // std::cout << std::format("{}\t|\t{:.2f}\t|\t{:.2f}\t|\t{}", pair.first, pair.second, -std::ceil( std::log2(pair.second)), this->codes[pair.first]) << std::endl;
         std::string code;
         for( size_t i = 0; i < std::ceil( std::log2(pair.second) ); i++ ) {
             code += "0";
         }
     }
-
-
     return;
 }
 

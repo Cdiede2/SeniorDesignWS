@@ -8,6 +8,9 @@
 
 #include <openssl/md5.h>
 #include <fstream>
+#include <nlohmann/json.hpp>
+
+
 #include "shannon-fano.h"
 
 #include "camera.h"
@@ -274,6 +277,65 @@ TEST(SFComp, SFComp_SingleChar)
     EXPECT_EQ(frequencies.size(), 1);
     EXPECT_EQ(frequencies['a'], 1.0);
 }
+
+/* Test Parse Header */
+TEST(PARSE_HEADER, Normal_Header) {
+    CamHeader header = parseHeader("0/80/64");
+    EXPECT_EQ(header.protocol, 0);
+    EXPECT_EQ(header.flags, 0x80);
+    EXPECT_EQ(header.seq_num, 64);
+}
+
+TEST(PARSE_HEADER, Invalid_Header) {
+    EXPECT_ANY_THROW(parseHeader("0/80/64/extra"));
+    EXPECT_ANY_THROW(parseHeader("0/80"));
+    EXPECT_ANY_THROW(parseHeader("0"));
+    EXPECT_ANY_THROW(parseHeader("0:80:64:extra"));
+}
+
+/* Test Image Open */
+TEST(IMAGE, IMAGE_Open)
+{
+    cv::Mat image = cv::imread("/home/jay/Desktop/SeniorDesign_WS/Code/test_img.png");
+    EXPECT_FALSE(image.empty());
+    EXPECT_EQ(image.type(), CV_8UC3);
+    // EXPECT_EQ(image.cols, 640);
+    // EXPECT_EQ(image.rows, 480);
+}
+
+/* Test JSON Serialization */
+TEST(JSON, Generic_JSON_Serialization)
+{
+    nlohmann::json j;
+    j["name"] = "John Doe";
+    j["age"] = 30;
+    j["is_student"] = false;
+
+    std::string jsonString = j.dump();
+    std::cout << "Serialized JSON: " << jsonString << std::endl;
+
+    nlohmann::json parsedJson = nlohmann::json::parse(jsonString);
+    EXPECT_EQ(parsedJson["name"], "John Doe");
+    EXPECT_EQ(parsedJson["age"], 30);
+    EXPECT_EQ(parsedJson["is_student"], false);
+}
+
+TEST(JSON, SF_JSON_Serialization) {
+    ShannonFano sf;
+    std::map<char, double> frequencies;
+    std::string input = "hello world";
+ 
+    EXPECT_NO_THROW( sf.buildCodes(frequencies, input) );
+ 
+    std::map<char, std::string> codes = sf.getCodes();
+    
+    nlohmann::json j = codes;
+
+    std::string jsonString = nlohmann::json(codes).dump();
+    std::cout << "Serialized JSON: " << j.dump(2) << std::endl;
+}
+
+
 
 /* Utility Functions */
 std::string convertHashToString(const uint8_t *digest)
