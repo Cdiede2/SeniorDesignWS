@@ -57,7 +57,6 @@ enum numbers
     IDLE_STAGE,         // Idle Stage, wait for request from client
     LSTN_STAGE,         // Server is Listening for active connections
     RDY_STAGE,
-    RECV_STAGE,         // Receive Request from client
     REQ_STAGE,          // Send Image
     RST_STAGE           // Reset Stage
 };
@@ -173,72 +172,3 @@ int main(int argc, char **argv)
     }
     return RETURN_OK;
 }
-
-
-// std::cout << std::format("Server Listening On: {}:{}", server_ip, server_port) << std::endl;
-// try
-// {
-//     bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
-    
-//     // Server Listening Loop
-//     while ( true ) {
-//         int client_socket;
-//         char buffer[1024] = {0};
-//         std::vector<std::string> header_vector;
-
-//         // Listen for incoming connections, supports maximum of 5 clients
-//         listen(sockfd, 5);
-//         client_socket = accept(sockfd, nullptr, nullptr);
-        
-//         // Wait for Client to Send Data
-//         recv(client_socket, buffer, sizeof(buffer), 0);
-
-//         header_vector = split({buffer}, '/');
-
-//         // Check if Header is Valid
-//         if ( header_vector.size() != 3 || header_vector.at(0) != "0" )
-//         {
-//             std::cerr << std::format("ERROR: Invalid Header Received") << std::endl;
-//             close(client_socket);
-//             continue;
-//         } 
-        
-//         // Check if Start bit is HIGH
-//         if( header_vector.at(1) == "80"  ) {
-//             std::cout << std::format("I received {}", reinterpret_cast<const char *>(buffer)) << std::endl;
-
-//             // Split and Read Values Sent by Client
-//             std::cout << "Index 0: " << header_vector.at(0) << std::endl;
-//             std::cout << "Index 1: " << header_vector.at(1) << std::endl;
-//             std::cout << "Index 2: " << header_vector.at(2) << std::endl;
-//         }
-//         ShannonFano sf;
-//         std::map<char, double> frequencies;
-//         std::map<char, std::string> codes;
-//         sf.buildCodes(frequencies, "hello");
-
-
-//         nlohmann::json json_data = sf.getCodes();
-//         send(client_socket, json_data.dump().c_str(), json_data.dump().size(), 0);
-
-
-//         // Check if Data Start bit is HIGH
-        
-//         std::cout << "---------------------------" << std::endl;
-//         send(client_socket, "hello", 6, 0);
-//         close(client_socket);
-//     }
-
-
-
-
-
-//     // std::cout << std::format("Client Sent: {}", buffer) << std::endl;
-// }
-// catch (std::exception &err)
-// {
-//     std::cerr << std::format("ERROR: {}", err.what()) << std::endl;
-//     return RETURN_NETWORK_ERR;
-// }
-
-// close(sockfd);

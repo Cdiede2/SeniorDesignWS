@@ -91,10 +91,18 @@ Client::~Client() {
     close( this->clientSocket );
 }
 
+
 /**
- * @brief
- * @details
- * @param int socket
+ * @brief Sets the server socket for the client.
+ * 
+ * This function assigns a valid socket to the client, provided the client
+ * is in the IDLE state and the socket value is within the valid range.
+ * 
+ * @param socket The socket descriptor to be set for the server connection.
+ *               Must be a positive integer within the range [1, 65535].
+ * 
+ * @throws std::exception If the client is not in the IDLE state.
+ * @throws std::exception If the provided socket value is invalid (not in the range [1, 65535]).
  */
 void Client::setServerSocket( int socket ) {
     // Check Client is in IDLE state
