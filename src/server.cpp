@@ -19,6 +19,8 @@
 #include "camera.h" // Split and Strip functions
 #include "shannon-fano.h" // Shannon-Fano Encoding
 
+#define NUMBER_FRAMES 3
+
 enum numbers
 {
     RETURN_OK,
@@ -152,10 +154,24 @@ void Server::serverLoop() {
     return;
 }
 
+/**
+ * 
+ */
 void Server::client_handle( int client_socket ) {
     char buffer[1024] = {0};
+    // std::string header;
+
     recv(client_socket, buffer, sizeof(buffer), 0);
-    std::cout << std::format("On Socket {} I heard {}", client_socket, buffer) << std::endl;
+    // std::cout << std::format("On Socket {} I heard {}", client_socket, buffer) << std::endl;
+    
+    nlohmann::json header {
+        {"pi", 3.14159},
+        {"one", 1}
+    };
+
+    // Header Includes Number of Frames and JSON frame to Saturation Color
+    // header = std::format("BEGIN FRAMES: {}\n");
+    send(client_socket, header.dump().c_str(), header.dump().size(), 0);
     close(client_socket);
 }
 

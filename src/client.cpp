@@ -147,6 +147,8 @@ void Client::connectToServer() {
  * 
  */
 void Client::sendRequestSrv() {
+    char buffer[1024] = {0};
+
     // Check Client is in REQ_STAGE
     if( this->state != REQ_STAGE ) {
         throw std::exception();
@@ -155,6 +157,9 @@ void Client::sendRequestSrv() {
     // Request Sent, wait for FIN response indicating last packet/frame
     std::cout << "Hello World" << std::endl;
     send(clientSocket, reinterpret_cast<const char*>("Hello Server"), 20, 0);
+
+    recv(clientSocket, buffer, sizeof(buffer), 0);
+    std::cout << std::format("\t==> {}", buffer) << std::endl;
 }
 
 

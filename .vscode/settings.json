@@ -65,7 +65,11 @@
         "stop_token": "cpp",
         "thread": "cpp",
         "any": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "codecvt": "cpp",
+        "forward_list": "cpp",
+        "ranges": "cpp",
+        "valarray": "cpp"
     },
     "editor.experimentalGpuAcceleration": "off",
     "github.copilot.enable": {
