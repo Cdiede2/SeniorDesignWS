@@ -11,7 +11,8 @@
 enum numbers
 {
     RETURN_OK,
-    RETURN_NETWORK_ERR
+    RETURN_NETWORK_ERR,
+    RETURN_USR_ERR
 };
 
 /** TODO List: Client
@@ -24,11 +25,99 @@ enum numbers
  *      *       * TODO: Reconstruct image
  *      *       * TODO: Validate image
  *      *   TODO: Reset Stage
- *  TODO: Idle Stage, wait for call from user
- *  TODO: Connect to Server
- *  TODO: Retrieve Image
- *  TODO: Reset Stage
+ * 
+ *  INPROGRESS: Idle Stage, wait for call from user
+ *  INPROGRESS: Connect to Server
+ *  INPROGRESS: Retrieve Image
+ *  INPROGRESS: Reset Stage
  */
+
+enum state{ 
+    IDLE_STAGE,         // Idle Stage, wait for call from user
+    REQ_STAGE,          // Connect to Server
+    RECV_STAGE,         // Retrieve Image
+    RST_STAGE           // Reset Stage
+};
+
+class Client
+{
+    public:
+        // Constructor
+        Client() : serverSocket(39554), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
+        Client(int port) : serverSocket(port), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
+
+        // Mutators
+        void setServerSocket( int socket );
+        void connectToServer();
+        void sendRequestSrv();
+        void recvFromsrv();
+
+        // Accessors
+        uint8_t getCurrentState() const { return this->state; }
+        int getCurrentClientSocket() const { return this->clientSocket; }
+        int getCurrentServerSocket() const { return this->serverSocket; }
+
+        
+    private:
+        uint8_t state;
+        int serverSocket;
+        int clientSocket;
+        sockaddr_in serverAddr;
+};
+
+/**
+ * @brief
+ * @details
+ * @param int socket
+ */
+void Client::setServerSocket( int socket ) {
+    // Check Client is in IDLE state
+    if( this->state != IDLE_STAGE ) {
+        throw std::exception();
+    }
+    
+    // Check socket is valid
+    if( socket > 0 && socket < 65536 ) {
+        this->serverSocket = socket;
+    } else {
+        throw std::exception();
+    }
+    return;
+}
+
+/**
+ * 
+ */
+void Client::connectToServer() {
+    // Check Client is in IDLE stage
+    if( this->state != IDLE_STAGE ) {
+        throw std::exception();
+    }
+
+    // Proceed with connection
+    this->serverAddr.sin_family = AF_INET;
+    this->serverAddr.sin_port = htons(this->serverSocket);
+
+    if (inet_pton(AF_INET, "127.0.0.1", &this->serverAddr.sin_addr) <= 0) {
+        throw std::exception();
+    }
+    if (connect(this->clientSocket, (struct sockaddr *)&this->serverAddr, sizeof(this->serverAddr)) < 0) {
+        throw std::exception();
+    }
+
+    // Update state to REQ(UEST) STAGE, indactes client is ready to send request to server
+    this->state = REQ_STAGE;
+}
+
+void Client::sendRequestSrv() {
+    // Check Client is in REQ_STAGE
+    if( this->state != REQ_STAGE ) {
+        throw std::exception();
+    }
+
+    send(clientSocket, reinterpret_cast<const char*>("Hello Server"), 20, 0);
+}
+
 
 int main(int argc, char **argv)
 {
