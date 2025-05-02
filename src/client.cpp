@@ -1,6 +1,15 @@
 #include <iostream>
 #include <format>
 
+
+
+
+
+
+#include <opencv4/opencv2/core.hpp>
+#include <opencv4/opencv2/imgproc.hpp>
+#include <opencv4/opencv2/highgui.hpp>
+
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -46,6 +55,9 @@ class Client
         Client() : serverSocket(39554), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
         Client(int port) : serverSocket(port), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
 
+        // Deconstructor
+        ~Client();
+
         // Mutators
         void setServerSocket( int socket );
         void connectToServer();
@@ -63,7 +75,21 @@ class Client
         int serverSocket;
         int clientSocket;
         sockaddr_in serverAddr;
+
+        void sendImage( const cv::Mat& image ){
+            std::vector<uint8_t> buffer;
+            // cv::imencode(".jpg", image, buffer);
+            std::cout << "Sending Image" << std::endl;
+        }
+
 };
+
+/**
+ * 
+ */
+Client::~Client() {
+    close( this->clientSocket );
+}
 
 /**
  * @brief
@@ -94,13 +120,13 @@ void Client::connectToServer() {
         throw std::exception();
     }
 
-    // Proceed with connection
-    this->serverAddr.sin_family = AF_INET;
-    this->serverAddr.sin_port = htons(this->serverSocket);
+    // Proceed with Connection 
+    this->serverAddr = {
+        AF_INET,
+        htons(this->serverSocket),
+        INADDR_ANY
+    };
 
-    if (inet_pton(AF_INET, "127.0.0.1", &this->serverAddr.sin_addr) <= 0) {
-        throw std::exception();
-    }
     if (connect(this->clientSocket, (struct sockaddr *)&this->serverAddr, sizeof(this->serverAddr)) < 0) {
         throw std::exception();
     }
@@ -109,52 +135,26 @@ void Client::connectToServer() {
     this->state = REQ_STAGE;
 }
 
+/**
+ * 
+ */
 void Client::sendRequestSrv() {
     // Check Client is in REQ_STAGE
     if( this->state != REQ_STAGE ) {
         throw std::exception();
     }
 
+    std::cout << "Hello World" << std::endl;
     send(clientSocket, reinterpret_cast<const char*>("Hello Server"), 20, 0);
 }
 
 
 int main(int argc, char **argv)
 {
-    char* buffer[1024];
-    int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-    sockaddr_in serverAddr{
-        AF_INET,
-        htons(39554),
-        INADDR_ANY};
+    Client hello_client;
+    hello_client.setServerSocket(39554);
+    hello_client.connectToServer();
+    hello_client.sendRequestSrv();
 
-    CamHeader header{
-        0,
-        0x80,
-        64
-    };
-
-    std::cout << std::format("Client Connecting To: {}:{}", "127.0.0.1", 39554) << std::endl;
-    try
-    {
-        std::string message = std::format("{}/{:02x}/{}", header.protocol, header.flags, header.size );
-
-        connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
-        
-        // Send Header
-        // send(clientSocket, reinterpret_cast<const char *>("Hello World!"), 13, 0);
-        send(clientSocket, message.c_str(), message.size(), 0 );
-        recv(clientSocket, buffer, sizeof(buffer), 0);
-        std::cout << std::format("I received {}", reinterpret_cast<const char*>(buffer)) << std::endl;
-        // std::cout << std::format("Val: {}", "hello") << std::endl;
-        close(clientSocket);
-    }
-    catch (std::exception &e)
-    {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return RETURN_NETWORK_ERR;
-    }
-
-    std::cout << "Hello World!" << std::endl;
     return RETURN_OK;
 }

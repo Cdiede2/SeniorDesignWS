@@ -52,6 +52,59 @@ enum numbers
  *      *   TODO:
  */
 
+ enum state{ 
+    IDLE_STAGE,         // Idle Stage, wait for request from client
+    LSTN_STAGE,         // Server is Listening for active connections
+
+    RECV_STAGE,         // Receive Request from client
+    REQ_STAGE,          // Send Image
+    RST_STAGE           // Reset Stage
+};
+
+class Server {
+    public:
+        // Constructors
+        Server() : serverPort(39554), state() {};
+        Server( int port ) : serverPort(port) {};
+
+        // Mutators
+        void setServerPort( int port );
+        void setupServer();
+
+
+    private:
+        uint16_t serverPort;
+        uint8_t state;
+
+        struct sockaddr_in serverAddress;
+};
+
+void Server::setServerPort( int port ) {
+    // Check that port is valid
+    if( !( port > 0 && port < 65536 ) ) {
+        throw std::exception();
+    } 
+
+    this->serverPort = static_cast<uint16_t>(port);
+    return;
+}
+
+void Server::setupServer() {
+    // Validate stage
+    if ( this->state != IDLE_STAGE ) {
+        throw std::exception();
+    }
+
+
+    this->serverAddress = {
+        AF_INET,
+        htons( this->serverPort ),
+        INADDR_ANY
+    };
+
+}
+
+
 int main(int argc, char **argv)
 {
     const char *server_ip = "127.0.0.1";
@@ -109,15 +162,6 @@ int main(int argc, char **argv)
 
             nlohmann::json json_data = sf.getCodes();
             send(client_socket, json_data.dump().c_str(), json_data.dump().size(), 0);
-
-            // cv::Mat image = cv::imread("test.jpg");
-            // if (image.empty())
-            // {
-                // std::cerr << "ERROR: Could not open or find the image!" << std::endl;
-                // close(client_socket);
-                // continue;
-            // }
-
 
 
             // Check if Data Start bit is HIGH
