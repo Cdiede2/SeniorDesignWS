@@ -144,6 +144,7 @@ void Client::sendRequestSrv() {
         throw std::exception();
     }
 
+    // Request Sent, wait for FIN response indicating last packet/frame
     std::cout << "Hello World" << std::endl;
     send(clientSocket, reinterpret_cast<const char*>("Hello Server"), 20, 0);
 }
