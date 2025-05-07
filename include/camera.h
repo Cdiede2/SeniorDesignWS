@@ -22,6 +22,12 @@ struct CamHeader {
     uint32_t size;
 };
 
+enum SatColor {
+    RED,
+    GREEN,
+    BLUE
+};
+
 /**
  * @brief Removes leading and trailing characters from a string based on a set of delimiters.
  * @param input The input string to be stripped.

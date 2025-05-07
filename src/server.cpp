@@ -16,7 +16,7 @@
 #include <unistd.h>
 
 // #include "shannon-fano.h"
-#include "camera.h" // Split and Strip functions
+#include "camera.h"       // Split and Strip functions
 #include "shannon-fano.h" // Shannon-Fano Encoding
 
 #define NUMBER_FRAMES 3
@@ -55,98 +55,110 @@ enum numbers
  *      *   TODO:
  */
 
- enum state{ 
-    IDLE_STAGE,         // Idle Stage, wait for request from client
-    LSTN_STAGE,         // Server is Listening for active connections
+enum state
+{
+    IDLE_STAGE, // Idle Stage, wait for request from client
+    LSTN_STAGE, // Server is Listening for active connections
     RDY_STAGE,
-    REQ_STAGE,          // Send Image
-    RST_STAGE           // Reset Stage
+    REQ_STAGE, // Send Image
+    RST_STAGE  // Reset Stage
 };
 
-class Server {
-    public:
-        // Constructors
-        Server() : serverPort(39554), state(IDLE_STAGE), serverSocket( socket(AF_INET, SOCK_STREAM, 0) ) {};
-        Server( int port ) : serverPort(port), state(IDLE_STAGE), serverSocket( socket(AF_INET, SOCK_STREAM, 0)) {};
+class Server
+{
+public:
+    // Constructors
+    Server() : serverPort(39554), state(IDLE_STAGE), serverSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
+    Server(int port) : serverPort(port), state(IDLE_STAGE), serverSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
 
-        // Mutators
-        void setServerPort( int port );
-        void setupServer();
+    // Mutators
+    void setServerPort(int port);
+    void setupServer();
 
-        // Listening Loop
-        void serverLoop();
+    // Listening Loop
+    void serverLoop();
 
-    private:
-        uint16_t serverPort;
-        uint8_t state;
-        int serverSocket;
-        struct sockaddr_in serverAddress;
+private:
+    uint16_t serverPort;
+    uint8_t state;
+    int serverSocket;
+    struct sockaddr_in serverAddress;
 
-        // Private Client Handle
-        void client_handle( int client_socket );
+    // Private Client Handle
+    void client_handle(int client_socket);
 };
 
 /**
- * 
+ *
  */
-void Server::setServerPort( int port ) {
+void Server::setServerPort(int port)
+{
     // Check that port is valid
-    if( !( port > 0 && port < 65536 ) ) {
+    if (!(port > 0 && port < 65536))
+    {
         throw std::exception();
-    } 
+    }
 
     this->serverPort = static_cast<uint16_t>(port);
     return;
 }
 
 /**
- * 
+ *
  */
-void Server::setupServer() {
+void Server::setupServer()
+{
     // Validate stage
-    if ( this->state != IDLE_STAGE ) {
+    if (this->state != IDLE_STAGE)
+    {
         throw std::runtime_error("Server Still in Idle");
     }
 
     // Seup Server Port
     this->serverAddress = {
         AF_INET,
-        htons( this->serverPort ),
-        INADDR_ANY
-    };
-    bind( this->serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
+        htons(this->serverPort),
+        INADDR_ANY};
+    bind(this->serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
     this->state = RDY_STAGE;
     return;
 }
 
 /**
- * 
+ *
  */
-void Server::serverLoop() {
-    if( this->state != RDY_STAGE ) {
+void Server::serverLoop()
+{
+    if (this->state != RDY_STAGE)
+    {
         throw std::runtime_error("Server is not in the ready state to start the loop.");
     }
 
     // Main Server Loop
-    for(;;) {
+    std::cout << std::format("Server Listening on: {}", this->serverPort) << std::endl;
+    std::cout << this->serverSocket << std::endl;
+
+    cv::Mat image = cv::imread("../image.jpg", cv::IMREAD_COLOR);
+    for (;;)
+    {
         int clientSocket;
         char buffer[1024] = {0};
-        
+
         // Listen for Incoming Connections
         listen(serverSocket, 5);
         clientSocket = accept(serverSocket, nullptr, nullptr);
-        
+
         // Read an image from the camera or file
-        cv::Mat image = cv::imread("../image.jpg", cv::IMREAD_COLOR);
-        if (image.empty()) {
+        if (image.empty())
+        {
             std::cerr << "Error: Could not read the image." << std::endl;
             close(clientSocket);
             continue;
         }
 
-        // Display the image in a window
-        cv::imshow("Server Image Display", image);
-        cv::waitKey(1); // Allow the window to refresh
+        // DEBUG: Display the image in a window
+        // cv::imshow("Server Image Display", image);
+        // cv::waitKey(1); // Allow the window to refresh
 
         std::thread thr(&Server::client_handle, this, clientSocket);
         thr.detach(); // Detach the thread to allow it to run independently
@@ -155,35 +167,66 @@ void Server::serverLoop() {
 }
 
 /**
- * 
+ *
  */
-void Server::client_handle( int client_socket ) {
+void Server::client_handle(int client_socket)
+{
     char buffer[1024] = {0};
+    cv::Mat img = cv::imread("../image.jpg", cv::IMREAD_COLOR);
     // std::string header;
 
-    recv(client_socket, buffer, sizeof(buffer), 0);
-    // std::cout << std::format("On Socket {} I heard {}", client_socket, buffer) << std::endl;
-    
-    nlohmann::json header {
-        {"pi", 3.14159},
-        {"one", 1}
-    };
+    std::cout << std::format("Client Connection on Socket: {}", client_socket) << std::endl;
 
+    recv(client_socket, buffer, sizeof(buffer), 0);
+    std::cout << "Received: " << buffer << std::endl;
     // Header Includes Number of Frames and JSON frame to Saturation Color
-    // header = std::format("BEGIN FRAMES: {}\n");
+    nlohmann::json header{
+        {"im_width", img.cols},
+        {"im_height", img.rows},
+        {"im_depth", 3},
+        {"sat_color", SatColor::RED}
+    };
+    
     send(client_socket, header.dump().c_str(), header.dump().size(), 0);
+    std::cout << "Serialized JSON Send" << std::endl;
+
+    if (!img.empty())
+    // if(1)
+    {
+        std::cout << "Size of img: " << img.size << std::endl;
+        int imgSize = img.total() * img.elemSize();
+        send(client_socket, &imgSize, sizeof(imgSize), 0); // Send the size of the image first
+        send(client_socket, img.data, imgSize, 0);        // Send the actual image data
+        
+        // int value(0);
+        // send(client_socket, &value, sizeof(int), 0);
+        
+        // // Send Image Pixel by Pixel
+        // for (size_t ul_width = 0; ul_width < img.rows; ul_width++)
+        // {
+        //     for (size_t ul_height = 0; ul_height < img.cols; ul_height++)
+        //     {
+        //         cv::Vec3b data = img.at<cv::Vec3b>(ul_height, ul_width);
+        //         // int value = 125;
+        //         send(client_socket, &data, sizeof(data), 0);
+        //     }
+        // }
+    }
+
     close(client_socket);
 }
-
 
 int main(int argc, char **argv)
 {
     Server helloServer;
     helloServer.setServerPort(39554);
     helloServer.setupServer();
-    try {
+    try
+    {
         helloServer.serverLoop();
-    } catch( std::exception& exc ) {
+    }
+    catch (std::exception &exc)
+    {
         std::cerr << exc.what() << std::endl;
     }
     return RETURN_OK;
