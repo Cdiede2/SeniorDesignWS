@@ -77,5 +77,20 @@
         "plaintext": false,
         "markdown": false,
         "scminput": false
-    }
+    },
+    "cSpell.words": [
+        "fano",
+        "gtest",
+        "HELO",
+        "imdecode",
+        "imencode",
+        "IMREAD",
+        "imshow",
+        "LSTN",
+        "nlohmann",
+        "OPENCV",
+        "ostr",
+        "STND",
+        "UEST"
+    ]
 }

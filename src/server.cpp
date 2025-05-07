@@ -130,7 +130,7 @@ void Server::setupServer()
         throw ServerException({"SETUP::ERROR: Invalid port range specified", 1});
     }
 
-    // Seup Server Port
+    // Setup Server Port
     this->serverAddress = {
         AF_INET,
         htons(this->serverPort),
@@ -235,9 +235,6 @@ void Server::client_handle(int client_socket)
     std::vector<std::pair<cv::Mat, std::string>> resultant_imgs;
     std::vector<Filter> filters;
 
-    try {
-        
-    }
     // Receive Client Request, Parse JSON to retrieve desired color filters
     recv(client_socket, buffer, sizeof(buffer), 0);
     str_buffer = buffer;
@@ -405,7 +402,7 @@ std::vector<Filter> Server::buildFilterArray( nlohmann::json& request ) {
     
     nlohmann::json::iterator it = request.end();
     if( request.find("frames") == it ) {
-        throw ServerException("FilterArr::ERRROR: Passed request is missing frames attribute", 0);
+        throw ServerException("FilterArr::ERROR: Passed request is missing frames attribute", 0);
     }
     
     std::vector<Filter> filters;

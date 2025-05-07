@@ -16,13 +16,13 @@
  * @param seq_num Sequence number of header
  * @param size Size of following payload, used to allocate buffer size prior to transmission
  */
-struct CamHeader
-{
-    uint8_t protocol;
-    uint8_t flags; // (S)tart || (L)isten  ||  (SE)t Encode || (R)esponse || (E)nd || Unused...
-    uint16_t seq_num;
-    uint32_t size;
-};
+// struct CamHeader
+// {
+//     uint8_t protocol;
+//     uint8_t flags; // Start || Listen  ||  Set Encode || Response || End || Unused...
+//     uint16_t seq_num;
+//     uint32_t size;
+// };
 
 struct ClientException
 {
@@ -154,26 +154,26 @@ std::vector<std::string> split(const std::string &input, char delim)
  * assigns the parsed values to the corresponding fields in the CamHeader structure.
  * It throws an exception if the header format is invalid or if the number of fields is incorrect.
  */
-CamHeader parseHeader(const std::string &header)
-{
-    CamHeader camHeader;
-    std::vector<std::string> headerVector = split(header, '/');
+// CamHeader parseHeader(const std::string &header)
+// {
+//     CamHeader camHeader;
+//     std::vector<std::string> headerVector = split(header, '/');
 
-    if (headerVector.size() != 3)
-    {
-        throw std::invalid_argument("Invalid header format");
-    }
+//     if (headerVector.size() != 3)
+//     {
+//         throw std::invalid_argument("Invalid header format");
+//     }
 
-    camHeader.protocol = std::stoi(headerVector[0]);
-    camHeader.flags = std::stoi(headerVector[1], nullptr, 16);
-    camHeader.seq_num = std::stoi(headerVector[2]);
+//     camHeader.protocol = std::stoi(headerVector[0]);
+//     camHeader.flags = std::stoi(headerVector[1], nullptr, 16);
+//     camHeader.seq_num = std::stoi(headerVector[2]);
 
-    if (camHeader.flags > 0xFF)
-    {
-        throw std::invalid_argument("Invalid flags value");
-    }
-    return camHeader;
-}
+//     if (camHeader.flags > 0xFF)
+//     {
+//         throw std::invalid_argument("Invalid flags value");
+//     }
+//     return camHeader;
+// }
 
 /**
  * @brief Generates and returns the MD5 Checksum

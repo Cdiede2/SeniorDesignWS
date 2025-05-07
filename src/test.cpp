@@ -279,19 +279,19 @@ TEST(SFComp, SFComp_SingleChar)
 }
 
 /* Test Parse Header */
-TEST(PARSE_HEADER, Normal_Header) {
-    CamHeader header = parseHeader("0/80/64");
-    EXPECT_EQ(header.protocol, 0);
-    EXPECT_EQ(header.flags, 0x80);
-    EXPECT_EQ(header.seq_num, 64);
-}
+// TEST(PARSE_HEADER, Normal_Header) {
+//     CamHeader header = parseHeader("0/80/64");
+//     EXPECT_EQ(header.protocol, 0);
+//     EXPECT_EQ(header.flags, 0x80);
+//     EXPECT_EQ(header.seq_num, 64);
+// }
 
-TEST(PARSE_HEADER, Invalid_Header) {
-    EXPECT_ANY_THROW(parseHeader("0/80/64/extra"));
-    EXPECT_ANY_THROW(parseHeader("0/80"));
-    EXPECT_ANY_THROW(parseHeader("0"));
-    EXPECT_ANY_THROW(parseHeader("0:80:64:extra"));
-}
+// TEST(PARSE_HEADER, Invalid_Header) {
+//     EXPECT_ANY_THROW(parseHeader("0/80/64/extra"));
+//     EXPECT_ANY_THROW(parseHeader("0/80"));
+//     EXPECT_ANY_THROW(parseHeader("0"));
+//     EXPECT_ANY_THROW(parseHeader("0:80:64:extra"));
+// }
 
 /* Test Image Open */
 TEST(IMAGE, IMAGE_Open)

@@ -149,7 +149,7 @@ void Client::connectToServer()
         throw ClientException("ERROR: Client could not connect on provided port", 2);
     }
 
-    // Update state to REQ(UEST) STAGE, indactes client is ready to send request to server
+    // Update state to REQ(UEST) STAGE, indicates client is ready to send request to server
     this->state = REQ_STAGE;
 }
 
