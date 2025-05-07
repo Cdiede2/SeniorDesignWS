@@ -178,43 +178,22 @@ void Client::sendRequestSrv()
         return;
     }
 
-    // reinterpret_cast<const char*>(buffer));
-    // std::cout << j.dump() << std::endl;
-    for (auto &[key, value] : j.items())
-    {
-        std::cout << "Key: " << key << " ==> Value: " << value << std::endl;
+    size_t value;
+    std::vector<uchar> mem_buffer;
+
+    recv(clientSocket, &value, sizeof(size_t), 0);
+    std::cout << "Value: " << value << std::endl;
+
+    mem_buffer.resize(value);
+    recv(clientSocket, mem_buffer.data(), value, 0);
+
+    img = cv::imdecode(mem_buffer, cv::IMREAD_COLOR);
+
+    std::cout << "Mem Buffer Size: " << mem_buffer.size() << std::endl;
+    if( img.empty() ) {
+        std::cerr << "Error: Image element is empty" << std::endl;
     }
-    // std::cout << j["im_width"] << std::endl;
-
-    std::cout << "Image Height: " << j["im_height"] << std::endl;
-    std::cout << "Image Width: "  << j["im_width"]  << std::endl;
-    std::cout << "Image Depth: "  << j["im_depth"]  << std::endl;
-    std::cout << "Image Color: "  << j["sat_color"] << std::endl;
-
-    // Initialize a cv::Mat object with fixed rows, columns, and type
-    img = cv::Mat( j["im_height"], j["im_width"], CV_8UC3 );
     
-    if (!img.empty())
-    {
-     int imgSize;   
-        std::cout << "Size of img: " << sizeof(img) << std::endl;
-        recv(clientSocket, &imgSize, sizeof(int), 0);
-        std::cout << "Image Size: " << imgSize << std::endl;
-        std::vector<uint8_t> imgBuffer(imgSize);
-        recv(clientSocket, imgBuffer.data(), imgSize, 0);
-        // for( auto val : imgBuffer ) {
-        //     std::cout << val << " ";
-        // }
-
-        std::cout << std::endl;
-        std::cout << imgBuffer.size();
-        
-        // img = cv::imdecode(imgBuffer, cv::IMREAD_COLOR);
-        // img = cv::imdecode(imgBuffer, cv::IMREAD_COLOR);
-    }
-
-    // Example: Fill the image with a solid color (optional)
-    // img.setTo(cv::Scalar(0, 255, 0)); // Green color
 
     cv::imshow("Image demo", img);
     cv::waitKey(0);

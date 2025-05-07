@@ -173,44 +173,36 @@ void Server::client_handle(int client_socket)
 {
     char buffer[1024] = {0};
     cv::Mat img = cv::imread("../image.jpg", cv::IMREAD_COLOR);
-    // std::string header;
 
-    std::cout << std::format("Client Connection on Socket: {}", client_socket) << std::endl;
-
+    // Receive Hello Server
     recv(client_socket, buffer, sizeof(buffer), 0);
-    std::cout << "Received: " << buffer << std::endl;
+
     // Header Includes Number of Frames and JSON frame to Saturation Color
     nlohmann::json header{
         {"im_width", img.cols},
         {"im_height", img.rows},
         {"im_depth", 3},
-        {"sat_color", SatColor::RED}
-    };
-    
+        {"sat_color", SatColor::RED}};
+
     send(client_socket, header.dump().c_str(), header.dump().size(), 0);
     std::cout << "Serialized JSON Send" << std::endl;
 
     if (!img.empty())
-    // if(1)
     {
-        std::cout << "Size of img: " << img.size << std::endl;
-        int imgSize = img.total() * img.elemSize();
-        send(client_socket, &imgSize, sizeof(imgSize), 0); // Send the size of the image first
-        send(client_socket, img.data, imgSize, 0);        // Send the actual image data
+        std::vector<uchar> buff;
+        size_t size;
+
+        cv::imencode(".png", img, buff );
+        size = buff.size();
         
-        // int value(0);
-        // send(client_socket, &value, sizeof(int), 0);
-        
-        // // Send Image Pixel by Pixel
-        // for (size_t ul_width = 0; ul_width < img.rows; ul_width++)
-        // {
-        //     for (size_t ul_height = 0; ul_height < img.cols; ul_height++)
-        //     {
-        //         cv::Vec3b data = img.at<cv::Vec3b>(ul_height, ul_width);
-        //         // int value = 125;
-        //         send(client_socket, &data, sizeof(data), 0);
-        //     }
-        // }
+        std::cout << size << std::endl;
+        send(client_socket, &size, sizeof(size_t), 0);
+        send(client_socket, buff.data(), buff.size(), 0 );
+
+        // send(client_socket, &imgSize, sizeof(imgSize), 0); // Send the size of the image first
+        // send(client_socket, img.data, imgSize, 0);         // Send the actual image data
+
+        // std::cout << img << std::endl;
     }
 
     close(client_socket);
