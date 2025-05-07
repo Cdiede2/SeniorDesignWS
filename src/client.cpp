@@ -141,6 +141,9 @@ void Client::connectToServer()
         htons(this->serverSocket),
         INADDR_ANY};
 
+    // Server running on Localhost
+    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
     if (connect(this->clientSocket, (struct sockaddr *)&this->serverAddr, sizeof(this->serverAddr)) < 0)
     {
         throw ClientException("ERROR: Client could not connect on provided port", 2);

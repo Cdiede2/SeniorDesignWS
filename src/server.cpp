@@ -25,7 +25,8 @@
 enum numbers
 {
     RETURN_OK,
-    RETURN_NETWORK_ERR
+    RETURN_NETWORK_ERR,
+    RETURN_USR_ERR
 };
 
 /** TODO List: Server
@@ -34,14 +35,14 @@ enum numbers
  *      *   TODO: Transmitting Stage
  *      *   TODO: Reset Stage
  *
- *  TODO: Listening Stage
+ *  DONE: Listening Stage
  *      *   DONE: Possibly use threading to support multiple connections simultaneously
  *      *   DONE: Listen for TCP Connection on port 39554, initiating connection
- *      *       * TODO: Client connected, send HEADER + message indicating as such
- *      *       * TODO: Trigger Client to enter Listening Stage Using Listen flag
+ *      *       * DONE: Client connected, send HEADER + message indicating as such
+ *      *       * DONE: Trigger Client to enter Listening Stage Using Listen flag
  *
  *  TODO: Transmitting Stage
- *      *   TODO: Read single image in from attached camera, store in VAR
+ *      *   INPROGRESS: Read single image in from attached camera, store in VAR
  *      *   TODO: Process VAR
  *      *       * TODO: Apply Bilateral Gaussian Filter to VAR to create PROC_VAR
  *      *       * TODO: Apply MD5 Hashing Function to PROC_VAR, store in GLOBAL_HASH
@@ -73,7 +74,7 @@ public:
     Server(int port) : serverPort(port), state(IDLE_STAGE), serverSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
 
     // Mutators
-    void setServerPort(int port);
+    void setServerPort(const char *mAddr, int port);
     void setupServer();
     cv::Mat getCameraFrame();
 
@@ -83,6 +84,7 @@ public:
 private:
     uint16_t serverPort;
     uint8_t state;
+    std::string mcastAddr;
     int serverSocket;
     struct sockaddr_in serverAddress;
 
@@ -91,16 +93,20 @@ private:
 };
 
 /**
- *
+ * @brief Set the server listening port and address
+ * @param mAddr const char*: multicast listening address
+ * @param port int: listening port
  */
-void Server::setServerPort(int port)
+void Server::setServerPort(const char *mAddr, int port)
 {
     // Check that port is valid
     if (!(port > 0 && port < 65536))
     {
-        throw std::exception();
+        throw ServerException(std::format("SETUP::ERROR: Invalid port range specified {}", port), 0);
+        
+        // throw ServerException("SETUP::ERROR: Invalid port range specified", 0);
     }
-
+    this->mcastAddr = mAddr;
     this->serverPort = static_cast<uint16_t>(port);
     return;
 }
@@ -115,12 +121,20 @@ void Server::setupServer()
     {
         throw std::runtime_error("Server Still in Idle");
     }
+    else if (!(this->serverPort > 0 && this->serverPort < 65536))
+    {
+        throw ServerException({"SETUP::ERROR: Invalid port range specified", 1});
+    }
 
     // Seup Server Port
     this->serverAddress = {
         AF_INET,
         htons(this->serverPort),
         INADDR_ANY};
+
+    // Listen on ALL IP addresses
+    serverAddress.sin_addr.s_addr = inet_addr(this->mcastAddr.c_str());
+
     bind(this->serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
     this->state = RDY_STAGE;
     return;
@@ -171,22 +185,33 @@ void Server::serverLoop()
 /**
  * @brief Retrieve a single camera frame from connected Camera at device 0
  */
-cv::Mat Server::getCameraFrame() {
+cv::Mat Server::getCameraFrame()
+{
     cv::Mat img;
+    cv::Mat filtered;
 
     // Attempt to Open Camera, on failure throw error
     auto cap = cv::VideoCapture(0);
-    if( !cap.isOpened() ) {
+    if (!cap.isOpened())
+    {
         throw ServerException({"Camera::ERROR: Could not open media", 1});
-    }   
+    }
 
+    // Read Image and Filter
     cap.read(img);
     cap.release();
-    std::cout << "Successfully pulled image from camera" << std::endl;
-    return img;
+    cv::bilateralFilter(img, filtered, 50, 25, 25);
+
+    if( img.empty() ) {
+        throw ServerException("Camera::ERROR: Camera was read, but no media was created", 0);
+    } else if( filtered.empty() ) {
+        throw ServerException("Camera::ERROR: Filtered Image is empty.", 0);
+    }
+    std::cout << "Camera::SUCCESS: Successfully, pulled image from camera" << std::endl;
+    return filtered;
 }
 
-/** 
+/**
  * @brief Handle Client connections to the server.
  * @details Process the client's request, generate the desired output,
  *          and send over sockets back to the user the requested data.
@@ -198,29 +223,29 @@ void Server::client_handle(int client_socket)
     cv::Mat img = cv::imread("../image.jpg", cv::IMREAD_COLOR);
     nlohmann::json recvRequest;
     std::string hash;
-    
+
     std::string str_buffer;
     size_t sizeV(0);
 
     recv(client_socket, buffer, sizeof(buffer), 0);
     str_buffer = buffer;
-    recvRequest = nlohmann::json::parse( str_buffer.begin(), str_buffer.end() );
+    recvRequest = nlohmann::json::parse(str_buffer.begin(), str_buffer.end());
     hash = recvRequest["hash"];
     recvRequest.erase("hash");
-    if( hash != md5(recvRequest.dump().c_str()) ) {
+    if (hash != md5(recvRequest.dump().c_str()))
+    {
         std::cout << "Hash Mismatch" << std::endl;
-    } else {
+    }
+    else
+    {
         std::cout << "Checksums match!" << std::endl;
     }
 
     std::cout << "String Buffer: " << recvRequest << std::endl;
 
-
     // Does not work on unconfigured WSL
     // Check: https://askubuntu.com/questions/1405903/capturing-webcam-video-with-opencv-in-wsl2
     // getCameraFrame();
-
-
 
     // Receive Client Hello
     recv(client_socket, buffer, sizeof(buffer), 0);
@@ -243,15 +268,15 @@ void Server::client_handle(int client_socket)
         size_t size;
 
         // Encode the Image in some format
-        cv::imencode(".png", img, buff );
+        cv::imencode(".png", img, buff);
         size = buff.size();
-        
+
         std::cout << size << std::endl;
 
         // FIRST: Send client the compressed image buffer size
         // Second: Send the entire compressed image data over socket
         send(client_socket, &size, sizeof(size_t), 0);
-        send(client_socket, buff.data(), buff.size(), 0 );
+        send(client_socket, buff.data(), buff.size(), 0);
     }
 
     close(client_socket);
@@ -260,11 +285,36 @@ void Server::client_handle(int client_socket)
 int main(int argc, char **argv)
 {
     Server helloServer;
-    helloServer.setServerPort(39554);
-    helloServer.setupServer();
+
     try
     {
+        // Read CMD line Arguments
+        if (argc < 2)
+        {
+            helloServer.setServerPort("127.0.0.1", 39554);
+        }
+        else if (argc < 3)
+        {
+            std::cerr << "This function is broken at this moment. Please pass command with 0 parameters for now." << std::endl;
+            std::cout << "\e[33m Value: " << std::stoi(argv[1]) << "\e[0m" << std::endl;
+            helloServer.setServerPort("127.0.0.1", std::stoi(argv[1]));
+        }
+        else
+        {
+            std::cerr << "This function is broken at this moment. Please pass command with 0 parameters for now." << std::endl;
+            return RETURN_USR_ERR;
+
+            std::cout << "\e[33m Value: " << argv[1] << "\e[0m" << std::endl;
+            std::cout << "\e[33m Value: " << std::stoi(argv[2]) << "\e[0m" << std::endl;
+            helloServer.setServerPort(argv[2], std::stoi(argv[1]));
+        }
+
+        // Run Server Code
+        helloServer.setupServer();
         helloServer.serverLoop();
+    }
+    catch( ServerException &exc ) {
+        std::cerr << exc.what << std::endl;
     }
     catch (std::exception &exc)
     {
