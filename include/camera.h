@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <iomanip>
+#include <openssl/evp.h>
 
 /**
  * @brief Struct containing elements of a header
@@ -20,6 +21,16 @@ struct CamHeader {
     uint8_t flags;  // (S)tart || (L)isten  ||  (SE)t Encode || (R)esponse || (E)nd || Unused...
     uint16_t seq_num;
     uint32_t size;
+};
+
+struct ClientException {
+    std::string what;
+    uint8_t val;
+};
+
+struct ServerException {
+    std::string what;
+    uint8_t val;
 };
 
 enum SatColor {
@@ -123,6 +134,32 @@ CamHeader parseHeader(const std::string &header)
         throw std::invalid_argument("Invalid flags value");
     }
     return camHeader;
+}
+
+/**
+ * @brief Generates and returns the MD5 Checksum
+ * @param string: The string to return the hash of
+ * @return The MD5 checksum of the parameter string.
+ * @ref Thank you Michael!
+ * https://stackoverflow.com/questions/7860362/how-can-i-use-openssl-md5-in-c-to-hash-a-string
+ */
+std::string md5(const std::string& content)
+{
+  EVP_MD_CTX*   context = EVP_MD_CTX_new();
+  const EVP_MD* md = EVP_md5();
+  unsigned char md_value[EVP_MAX_MD_SIZE];
+  unsigned int  md_len;
+  std::string        output;
+
+  EVP_DigestInit_ex2(context, md, NULL);
+  EVP_DigestUpdate(context, content.c_str(), content.length());
+  EVP_DigestFinal_ex(context, md_value, &md_len);
+  EVP_MD_CTX_free(context);
+
+  output.resize(md_len * 2);
+  for (unsigned int i = 0 ; i < md_len ; ++i)
+    std::sprintf(&output[i * 2], "%02x", md_value[i]);
+  return output;
 }
 
 // class Pixel

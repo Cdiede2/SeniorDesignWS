@@ -1,6 +1,8 @@
 #include <iostream>
 #include <format>
 #include <nlohmann/json.hpp>
+// #include <openssl/md5.h>
+#include <openssl/evp.h>
 
 #include <opencv4/opencv2/core.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
@@ -19,6 +21,8 @@ enum numbers
     RETURN_NETWORK_ERR,
     RETURN_USR_ERR
 };
+
+
 
 /** TODO List: Client
  *  TODO: Create Finite State Machine to keep track of which stage application is in
@@ -128,7 +132,7 @@ void Client::connectToServer()
     // Check Client is in IDLE stage
     if (this->state != IDLE_STAGE)
     {
-        throw std::exception();
+        throw ClientException{std::format("ERROR: Client in wrong state\nExpected: IDLE_STAGE(0)\nActual: {}", this->state), 1};
     }
 
     // Proceed with Connection
@@ -139,7 +143,7 @@ void Client::connectToServer()
 
     if (connect(this->clientSocket, (struct sockaddr *)&this->serverAddr, sizeof(this->serverAddr)) < 0)
     {
-        throw std::exception();
+        throw ClientException("ERROR: Client could not connect on provided port", 2);
     }
 
     // Update state to REQ(UEST) STAGE, indactes client is ready to send request to server
@@ -147,7 +151,7 @@ void Client::connectToServer()
 }
 
 /**
- *
+ * @brief Send a request containing desired frames to server
  */
 void Client::sendRequestSrv()
 {
@@ -155,49 +159,91 @@ void Client::sendRequestSrv()
     cv::Mat img;
 
     nlohmann::json j = "{ \"Success\": 0 }"_json;
+    nlohmann::json request;
+    std::string requestHash;
 
     // Check Client is in REQ_STAGE
     if (this->state != REQ_STAGE)
     {
-        throw std::exception();
+        throw ClientException(std::format("ERROR: Client in wrong state\nExpected: REQ_STAGE(1)\nActual: {}", this->state));
     }
 
+    // Generate Request
+    request["id"] = 0;
+    request["frames"] = {SatColor::RED, SatColor::GREEN, SatColor::BLUE};
+
+    requestHash = md5(request.dump().c_str());
+    request["hash"] = requestHash;
+
+    // // DEBUG
+    // unsigned char buFF[1024];
+    // std::string hash = md5("hello");
+    // std::cout << "MD5 hash: " << hash << std::endl;
+
+
+
+
+    // Place Request in Buffer, check size constraints 
+    size_t requestSize = request.dump().size();
+    if ( requestSize > 1023 ) {
+        throw ClientException( std::format("BAD_REQUEST::ERROR: Client Request Exceeded 1024 byte limit, Actual {}", requestSize), 1);
+    } else {
+        strcpy( buffer, request.dump().c_str() );
+    }
+    send(clientSocket, buffer, sizeof(buffer), 0);
+
+
+
+    // Clear buffer
+    for(int i = 0; i < sizeof(buffer); i++) {
+        buffer[i] = '\0';
+    }
+
+
+
     // Request Sent, wait for FIN response indicating last packet/frame
-    send(clientSocket, reinterpret_cast<const char *>("Hello Server"), 20, 0);
+    send(clientSocket, reinterpret_cast<const char *>("Client HELO"), 20, 0);
     recv(clientSocket, buffer, sizeof(buffer), 0);
 
+    // Try to receive Image frame from server
     try
     {
         std::string res = buffer;
+        std::vector<uchar> mem_buffer;
+        size_t buff_size;
+
+        // Parse JSON header from server
         j = nlohmann::json::parse(res.begin(), res.end());
+
+        // Receive buffer size from server, size buffer accordingly
+        recv(clientSocket, &buff_size, sizeof(size_t), 0);
+        mem_buffer.resize(buff_size);
+
+        // Receive data into buffer on client, decode into cv::Mat object
+        recv(clientSocket, mem_buffer.data(), buff_size, 0);
+        img = cv::imdecode(mem_buffer, cv::IMREAD_COLOR);
+
+        // Check that IMG is NOT empty, if it is throw an error
+        std::cout << "Mem Buffer Size: " << mem_buffer.size() << std::endl;
+        if (img.empty())
+        {
+            std::cerr << "Error: Image element is empty" << std::endl;
+        }
+
+        // Display Image
+        cv::imshow("Image demo", img);
+        cv::waitKey(0);
     }
     catch (nlohmann::json::parse_error &err)
     {
-        std::cerr << "ERROR: " << buffer << std::endl;
-        std::cerr << "ERROR: " << err.what() << std::endl;
+        std::cerr << "JSON::ERROR: " << buffer << std::endl;
+        std::cerr << "JSON::ERROR: " << err.what() << std::endl;
         return;
     }
-
-    size_t value;
-    std::vector<uchar> mem_buffer;
-
-    recv(clientSocket, &value, sizeof(size_t), 0);
-    std::cout << "Value: " << value << std::endl;
-
-    mem_buffer.resize(value);
-    recv(clientSocket, mem_buffer.data(), value, 0);
-
-    img = cv::imdecode(mem_buffer, cv::IMREAD_COLOR);
-
-    std::cout << "Mem Buffer Size: " << mem_buffer.size() << std::endl;
-    if( img.empty() ) {
-        std::cerr << "Error: Image element is empty" << std::endl;
+    catch (std::exception &exc)
+    {
+        std::cerr << "STND::ERROR: " << exc.what() << std::endl;
     }
-    
-
-    cv::imshow("Image demo", img);
-    cv::waitKey(0);
-    // std::cout << std::format(" ==> {}", buffer) << std::endl;
 }
 
 int main(int argc, char **argv)

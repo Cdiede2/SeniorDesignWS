@@ -2,6 +2,7 @@
 #include <cstring>
 #include <format>
 #include <nlohmann/json.hpp>
+#include <openssl/evp.h>
 
 #include <thread>
 #include <opencv4/opencv2/core.hpp>
@@ -74,6 +75,7 @@ public:
     // Mutators
     void setServerPort(int port);
     void setupServer();
+    cv::Mat getCameraFrame();
 
     // Listening Loop
     void serverLoop();
@@ -167,14 +169,60 @@ void Server::serverLoop()
 }
 
 /**
- *
+ * @brief Retrieve a single camera frame from connected Camera at device 0
+ */
+cv::Mat Server::getCameraFrame() {
+    cv::Mat img;
+
+    // Attempt to Open Camera, on failure throw error
+    auto cap = cv::VideoCapture(0);
+    if( !cap.isOpened() ) {
+        throw ServerException({"Camera::ERROR: Could not open media", 1});
+    }   
+
+    cap.read(img);
+    cap.release();
+    std::cout << "Successfully pulled image from camera" << std::endl;
+    return img;
+}
+
+/** 
+ * @brief Handle Client connections to the server.
+ * @details Process the client's request, generate the desired output,
+ *          and send over sockets back to the user the requested data.
+ * @return Nothing
  */
 void Server::client_handle(int client_socket)
 {
     char buffer[1024] = {0};
     cv::Mat img = cv::imread("../image.jpg", cv::IMREAD_COLOR);
+    nlohmann::json recvRequest;
+    std::string hash;
+    
+    std::string str_buffer;
+    size_t sizeV(0);
 
-    // Receive Hello Server
+    recv(client_socket, buffer, sizeof(buffer), 0);
+    str_buffer = buffer;
+    recvRequest = nlohmann::json::parse( str_buffer.begin(), str_buffer.end() );
+    hash = recvRequest["hash"];
+    recvRequest.erase("hash");
+    if( hash != md5(recvRequest.dump().c_str()) ) {
+        std::cout << "Hash Mismatch" << std::endl;
+    } else {
+        std::cout << "Checksums match!" << std::endl;
+    }
+
+    std::cout << "String Buffer: " << recvRequest << std::endl;
+
+
+    // Does not work on unconfigured WSL
+    // Check: https://askubuntu.com/questions/1405903/capturing-webcam-video-with-opencv-in-wsl2
+    // getCameraFrame();
+
+
+
+    // Receive Client Hello
     recv(client_socket, buffer, sizeof(buffer), 0);
 
     // Header Includes Number of Frames and JSON frame to Saturation Color
@@ -187,22 +235,23 @@ void Server::client_handle(int client_socket)
     send(client_socket, header.dump().c_str(), header.dump().size(), 0);
     std::cout << "Serialized JSON Send" << std::endl;
 
+    // Only execute below code if IMG is NOT empty
     if (!img.empty())
     {
+        // Create Buffer and Size variables
         std::vector<uchar> buff;
         size_t size;
 
+        // Encode the Image in some format
         cv::imencode(".png", img, buff );
         size = buff.size();
         
         std::cout << size << std::endl;
+
+        // FIRST: Send client the compressed image buffer size
+        // Second: Send the entire compressed image data over socket
         send(client_socket, &size, sizeof(size_t), 0);
         send(client_socket, buff.data(), buff.size(), 0 );
-
-        // send(client_socket, &imgSize, sizeof(imgSize), 0); // Send the size of the image first
-        // send(client_socket, img.data, imgSize, 0);         // Send the actual image data
-
-        // std::cout << img << std::endl;
     }
 
     close(client_socket);
