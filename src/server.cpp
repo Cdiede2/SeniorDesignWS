@@ -1,10 +1,12 @@
 #include <iostream>
 #include <cstring>
 #include <format>
+#include <cassert>
+
 #include <nlohmann/json.hpp>
 #include <openssl/evp.h>
-
 #include <thread>
+
 #include <opencv4/opencv2/core.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
 #include <opencv4/opencv2/highgui.hpp>
@@ -74,12 +76,12 @@ public:
     Server(int port) : serverPort(port), state(IDLE_STAGE), serverSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
 
     // Mutators
-    void setServerPort(const char *mAddr, int port);
-    void setupServer();
-    cv::Mat getCameraFrame();
+    void setServerPort(const char *mAddr, int port); // Setup the server Address and Port
+    void setupServer();                              // Create listening socket
+    cv::Mat getCameraFrame();                        // Access media and retrieve image
 
     // Listening Loop
-    void serverLoop();
+    void serverLoop(); // Main server loop
 
 private:
     uint16_t serverPort;
@@ -89,7 +91,9 @@ private:
     struct sockaddr_in serverAddress;
 
     // Private Client Handle
-    void client_handle(int client_socket);
+    void client_handle(int client_socket); // Client thread
+    bool imageProc(const cv::Mat &input, const std::vector<Filter> &filters, std::vector<std::pair<cv::Mat, std::string>> &ret_val);
+    std::vector<Filter> buildFilterArray( nlohmann::json& request );
 };
 
 /**
@@ -103,7 +107,7 @@ void Server::setServerPort(const char *mAddr, int port)
     if (!(port > 0 && port < 65536))
     {
         throw ServerException(std::format("SETUP::ERROR: Invalid port range specified {}", port), 0);
-        
+
         // throw ServerException("SETUP::ERROR: Invalid port range specified", 0);
     }
     this->mcastAddr = mAddr;
@@ -202,9 +206,12 @@ cv::Mat Server::getCameraFrame()
     cap.release();
     cv::bilateralFilter(img, filtered, 50, 25, 25);
 
-    if( img.empty() ) {
+    if (img.empty())
+    {
         throw ServerException("Camera::ERROR: Camera was read, but no media was created", 0);
-    } else if( filtered.empty() ) {
+    }
+    else if (filtered.empty())
+    {
         throw ServerException("Camera::ERROR: Filtered Image is empty.", 0);
     }
     std::cout << "Camera::SUCCESS: Successfully, pulled image from camera" << std::endl;
@@ -223,15 +230,22 @@ void Server::client_handle(int client_socket)
     cv::Mat img = cv::imread("../image.jpg", cv::IMREAD_COLOR);
     nlohmann::json recvRequest;
     std::string hash;
-
     std::string str_buffer;
     size_t sizeV(0);
+    std::vector<std::pair<cv::Mat, std::string>> resultant_imgs;
+    std::vector<Filter> filters;
 
+    try {
+        
+    }
+    // Receive Client Request, Parse JSON to retrieve desired color filters
     recv(client_socket, buffer, sizeof(buffer), 0);
     str_buffer = buffer;
     recvRequest = nlohmann::json::parse(str_buffer.begin(), str_buffer.end());
     hash = recvRequest["hash"];
     recvRequest.erase("hash");
+
+    // Validate Request HASH. On mismatch, network error may have occurred.
     if (hash != md5(recvRequest.dump().c_str()))
     {
         std::cout << "Hash Mismatch" << std::endl;
@@ -241,7 +255,31 @@ void Server::client_handle(int client_socket)
         std::cout << "Checksums match!" << std::endl;
     }
 
+    // Retrieve Filters from JSON
+    filters = buildFilterArray( recvRequest );
+
+    std::cout << "Filters: \n" << filters << std::endl;
     std::cout << "String Buffer: " << recvRequest << std::endl;
+    std::cout << recvRequest["frames"][0] << recvRequest["frames"][1] << recvRequest["frames"][2] << std::endl;
+
+    this->state = REQ_STAGE;
+    try {
+        bool success = imageProc( img, filters,  resultant_imgs );
+
+    } catch( ServerException& exc ) {
+        std::cerr << exc.what << std::endl;
+        return;
+    }
+
+    int frame_id = 1;
+    for( auto pair : resultant_imgs ) {
+        std::cout << "MD5 Hash: " << pair.second << std::endl;
+        cv::imshow(std::format("Frame ID: {}", frame_id++).c_str(),pair.first);
+        cv::waitKey(0);
+    }
+    // if( !success ) {
+    //     throw ServerException("ImageProc::ERROR: Failed to process frames", 0);
+    // }
 
     // Does not work on unconfigured WSL
     // Check: https://askubuntu.com/questions/1405903/capturing-webcam-video-with-opencv-in-wsl2
@@ -282,12 +320,131 @@ void Server::client_handle(int client_socket)
     close(client_socket);
 }
 
+/**
+ * @brief Split Image into frames and compute MD5 hash for each frame, individually.
+ * @param input Image to be processed by function call
+ * @param filters Color vectors to be applied to input as filters
+ * @param ret_val The final results of processing will be written here
+ * @return bool indicating the success or failure of the operation
+ */
+bool Server::imageProc(const cv::Mat &input, const std::vector<Filter> &filters, std::vector<std::pair<cv::Mat, std::string>> &ret_val)
+{
+
+    // Check input and filters are NOT EMPTY
+    if (this->state != REQ_STAGE)
+    {
+        throw ServerException(std::format("Image::Proc: In state ({}) when expected was REQ_STAGE(3)", this->state), 0);
+    }
+    else if (input.empty())
+    {
+        throw ServerException("ImageProc::ERROR: Passed input was empty", 0);
+    }
+    else if (!filters.size())
+    {
+        throw ServerException("ImageProc::ERROR: Filters array is empty", 0);
+    }
+
+    // NOTE: For now, only color vectors RGB are supported
+    assert(filters.at(0) == Filter(255, 0, 0));
+    assert(filters.at(1) == Filter(0, 255, 0));
+    assert(filters.at(2) == Filter(0, 0, 255));
+
+    for (auto filt : filters)
+    {
+        // Create a copy of the input image
+        cv::Mat filteredImage;
+        input.copyTo(filteredImage);
+
+        // Apply the filter by zeroing out other channels
+        std::vector<cv::Mat> channels(3);
+        cv::split(filteredImage, channels);
+
+        if (filt == Filter(255, 0, 0)) // Red filter
+        {
+            channels[1] = cv::Mat::zeros(channels[1].size(), channels[1].type()); // Zero out Green
+            channels[2] = cv::Mat::zeros(channels[2].size(), channels[2].type()); // Zero out Blue
+        }
+        else if (filt == Filter(0, 255, 0)) // Green filter
+        {
+            channels[0] = cv::Mat::zeros(channels[0].size(), channels[0].type()); // Zero out Red
+            channels[2] = cv::Mat::zeros(channels[2].size(), channels[2].type()); // Zero out Blue
+        }
+        else if (filt == Filter(0, 0, 255)) // Blue filter
+        {
+            channels[0] = cv::Mat::zeros(channels[0].size(), channels[0].type()); // Zero out Red
+            channels[1] = cv::Mat::zeros(channels[1].size(), channels[1].type()); // Zero out Green
+        }
+
+        // Merge the channels back together
+        cv::merge(channels, filteredImage);
+
+        // Compute MD5 hash for the filtered image
+        std::vector<uchar> buffer;
+        cv::imencode(".png", filteredImage, buffer);
+        std::string hash = md5({reinterpret_cast<const char *>(buffer.data())});
+
+        // Append the result to the return vector
+        ret_val.emplace_back(filteredImage, hash);
+    }
+
+    // For each filter, apply to IMG and append to ret_val
+    // for( auto filt : filters ) {
+
+    // }
+    return true;
+}
+
+/**
+ * @brief Generates Filters from Request
+ * @param request the JSON object which contains the filters list
+ */
+std::vector<Filter> Server::buildFilterArray( nlohmann::json& request ) {
+    if( ! request.size() ) {
+        throw ServerException("FilterArr::ERROR: Passed request is of size 0", 0);
+    }
+    
+    nlohmann::json::iterator it = request.end();
+    if( request.find("frames") == it ) {
+        throw ServerException("FilterArr::ERRROR: Passed request is missing frames attribute", 0);
+    }
+    
+    std::vector<Filter> filters;
+    std::vector<int> frames = request["frames"];
+    if ( frames.at(0) == SatColor::RED)
+    {
+        filters.push_back(Filter(255, 0, 0));
+    }
+    else
+    {
+        std::cout << "No Red" << std::endl;
+    }
+
+    if (frames.at(1) == SatColor::GREEN)
+    {
+        filters.push_back(Filter(0, 255, 0));
+    }
+    else
+    {
+        std::cout << "No grn" << std::endl;
+    }
+
+    if (frames.at(2) == SatColor::BLUE)
+    {
+        filters.push_back(Filter(0, 0, 255));
+    }
+    else
+    {
+        std::cout << "No Blu" << std::endl;
+    }
+    return filters;
+}
+
 int main(int argc, char **argv)
 {
     Server helloServer;
-
     try
     {
+        
         // Read CMD line Arguments
         if (argc < 2)
         {
@@ -313,7 +470,8 @@ int main(int argc, char **argv)
         helloServer.setupServer();
         helloServer.serverLoop();
     }
-    catch( ServerException &exc ) {
+    catch (ServerException &exc)
+    {
         std::cerr << exc.what << std::endl;
     }
     catch (std::exception &exc)

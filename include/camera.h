@@ -16,24 +16,65 @@
  * @param seq_num Sequence number of header
  * @param size Size of following payload, used to allocate buffer size prior to transmission
  */
-struct CamHeader {
+struct CamHeader
+{
     uint8_t protocol;
-    uint8_t flags;  // (S)tart || (L)isten  ||  (SE)t Encode || (R)esponse || (E)nd || Unused...
+    uint8_t flags; // (S)tart || (L)isten  ||  (SE)t Encode || (R)esponse || (E)nd || Unused...
     uint16_t seq_num;
     uint32_t size;
 };
 
-struct ClientException {
+struct ClientException
+{
     std::string what;
     uint8_t val;
 };
 
-struct ServerException {
+struct ServerException
+{
     std::string what;
     uint8_t val;
 };
 
-enum SatColor {
+struct Filter
+{
+    uint8_t _red;
+    uint8_t _grn;
+    uint8_t _blu;
+};
+
+bool operator==(const Filter &left, const Filter &right)
+{
+    if (left._red == right._red && left._grn == right._grn && left._blu == right._blu)
+    {
+        return true;
+    }
+    return false;
+}
+
+std::ostream &operator<<(std::ostream &ostr, const Filter &filter)
+{
+
+    ostr << std::hex << std::setw(3) << (int)filter._red << " ";
+    ostr << std::hex << std::setw(3) << (int)filter._grn << " ";
+    ostr << std::hex << std::setw(3) << (int)filter._blu << " ";
+    ostr << std::dec;
+    return ostr;
+}
+
+std::ostream &operator<<(std::ostream &ostr, const std::vector<Filter> &filters)
+{
+    ostr << " +--------------+" << std::endl;
+    for (auto filter : filters)
+    {
+        ostr << " | " << filter << " |" << std::endl;
+    }
+    ostr << " +--------------+" << std::endl;
+    return ostr;
+}
+
+enum SatColor
+{
     RED,
     GREEN,
     BLUE
@@ -44,8 +85,8 @@ enum SatColor {
  * @param input The input string to be stripped.
  * @param delims A string containing the characters to be removed from the beginning and end of the input string.
  * @return A new string with the specified characters removed from both ends.
- * @details This function iterates over the input string to identify and remove any characters 
- * specified in the `delims` parameter from the start and end of the string. If the input string 
+ * @details This function iterates over the input string to identify and remove any characters
+ * specified in the `delims` parameter from the start and end of the string. If the input string
  * is empty, it returns an empty string. The function preserves the order of the remaining characters.
  */
 std::string strip(const std::string &input, const std::string delims)
@@ -74,15 +115,14 @@ std::string strip(const std::string &input, const std::string delims)
     return result;
 }
 
-
 /**
  * @brief Splits a string into a vector of substrings based on a delimiter character.
  * @param input The input string to be split.
  * @param delim The delimiter character used to split the string.
  * @return A vector of substrings obtained by splitting the input string.
- * @details This function first removes leading and trailing occurrences of the delimiter 
- * from the input string using the `strip` function. It then iteratively finds the delimiter 
- * within the string and extracts substrings between occurrences of the delimiter. 
+ * @details This function first removes leading and trailing occurrences of the delimiter
+ * from the input string using the `strip` function. It then iteratively finds the delimiter
+ * within the string and extracts substrings between occurrences of the delimiter.
  * The resulting substrings are stored in a vector, which is returned as the output.
  */
 std::vector<std::string> split(const std::string &input, char delim)
@@ -106,13 +146,12 @@ std::vector<std::string> split(const std::string &input, char delim)
     return strVec;
 }
 
-
 /**
  * @brief Parses a header string into a CamHeader structure.
  * @param header The header string to be parsed.
  * @return A CamHeader structure containing the parsed values.
- * @details This function splits the input header string using the '/' delimiter and 
- * assigns the parsed values to the corresponding fields in the CamHeader structure. 
+ * @details This function splits the input header string using the '/' delimiter and
+ * assigns the parsed values to the corresponding fields in the CamHeader structure.
  * It throws an exception if the header format is invalid or if the number of fields is incorrect.
  */
 CamHeader parseHeader(const std::string &header)
@@ -143,24 +182,25 @@ CamHeader parseHeader(const std::string &header)
  * @ref Thank you Michael!
  * https://stackoverflow.com/questions/7860362/how-can-i-use-openssl-md5-in-c-to-hash-a-string
  */
-std::string md5(const std::string& content)
+std::string md5(const std::string &content)
 {
-  EVP_MD_CTX*   context = EVP_MD_CTX_new();
-  const EVP_MD* md = EVP_md5();
-  unsigned char md_value[EVP_MAX_MD_SIZE];
-  unsigned int  md_len;
-  std::string        output;
+    EVP_MD_CTX *context = EVP_MD_CTX_new();
+    const EVP_MD *md = EVP_md5();
+    unsigned char md_value[EVP_MAX_MD_SIZE];
+    unsigned int md_len;
+    std::string output;
 
-  EVP_DigestInit_ex2(context, md, NULL);
-  EVP_DigestUpdate(context, content.c_str(), content.length());
-  EVP_DigestFinal_ex(context, md_value, &md_len);
-  EVP_MD_CTX_free(context);
+    EVP_DigestInit_ex2(context, md, NULL);
+    EVP_DigestUpdate(context, content.c_str(), content.length());
+    EVP_DigestFinal_ex(context, md_value, &md_len);
+    EVP_MD_CTX_free(context);
 
-  output.resize(md_len * 2);
-  for (unsigned int i = 0 ; i < md_len ; ++i)
-    std::sprintf(&output[i * 2], "%02x", md_value[i]);
-  return output;
+    output.resize(md_len * 2);
+    for (unsigned int i = 0; i < md_len; ++i)
+        std::sprintf(&output[i * 2], "%02x", md_value[i]);
+    return output;
 }
+
 
 // class Pixel
 // {
