@@ -155,7 +155,7 @@ void Server::serverLoop()
     }
 
     // Main Server Loop
-    std::cout << std::format("Server Listening on: {}", this->serverPort) << std::endl;
+    std::cout << std::format("Server Listening on: {}", ntohs( this->serverAddress.sin_port) ) << std::endl;
     std::cout << this->serverSocket << std::endl;
 
     cv::Mat image = cv::imread("../image.jpg", cv::IMREAD_COLOR);

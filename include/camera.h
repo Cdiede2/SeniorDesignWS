@@ -147,6 +147,17 @@ std::vector<std::string> split(const std::string &input, char delim)
 }
 
 /**
+ * 
+ */
+int countChar( const std::string& input, char delim ) {
+    int sum = 0;
+    for( char chr : input ) {
+        sum += (chr == delim)?1:0;
+    }
+    return sum;
+}
+
+/**
  * @brief Parses a header string into a CamHeader structure.
  * @param header The header string to be parsed.
  * @return A CamHeader structure containing the parsed values.

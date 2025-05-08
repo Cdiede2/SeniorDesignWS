@@ -53,35 +53,32 @@ class Client
 {
 public:
     // Constructor
-    Client() : serverSocket(39554), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
-    Client(int port) : serverSocket(port), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
+    Client() : serverPort(39554), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
+    Client(int port) : serverPort(port), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
 
     // Deconstructor
     ~Client();
-
+    
     // Mutators
-    void setServerSocket(int socket);
     void connectToServer();
     void sendRequestSrv();
     void recvFromsrv();
+    void setServerPort(int socket);
+    void setServerAddress(const std::string&);
 
     // Accessors
-    uint8_t getCurrentState() const { return this->state; }
     int getCurrentClientSocket() const { return this->clientSocket; }
-    int getCurrentServerSocket() const { return this->serverSocket; }
-
+    int getCurrentServerSocket() const { return this->serverPort; }
+    
+    uint8_t getCurrentState() const { return this->state; }
+    std::string getServerAddress() const;
+    int getServerPort() const;
 private:
     uint8_t state;
-    int serverSocket;
+    int serverPort;
     int clientSocket;
-    sockaddr_in serverAddr;
-
-    void sendImage(const cv::Mat &image)
-    {
-        std::vector<uint8_t> buffer;
-        // cv::imencode(".jpg", image, buffer);
-        std::cout << "Sending Image" << std::endl;
-    }
+    sockaddr_in server;
+    std::string serverAddr;
 };
 
 /**
@@ -90,6 +87,14 @@ private:
 Client::~Client()
 {
     close(this->clientSocket);
+}
+
+std::string Client::getServerAddress() const {
+    return this->serverAddr;
+}
+
+int Client::getServerPort() const {
+    return this->serverPort;
 }
 
 /**
@@ -104,7 +109,7 @@ Client::~Client()
  * @throws std::exception If the client is not in the IDLE state.
  * @throws std::exception If the provided socket value is invalid (not in the range [1, 65535]).
  */
-void Client::setServerSocket(int socket)
+void Client::setServerPort(int socket)
 {
     // Check Client is in IDLE state
     if (this->state != IDLE_STAGE)
@@ -115,12 +120,42 @@ void Client::setServerSocket(int socket)
     // Check socket is valid
     if (socket > 0 && socket < 65536)
     {
-        this->serverSocket = socket;
+        this->serverPort = socket;
     }
     else
     {
         throw std::exception();
     }
+    return;
+}
+
+
+void Client::setServerAddress( const std::string& ipAddress ) {
+    std::vector<std::string> octets;
+    static const int LONGEST_POSSIBLE_IPV4 = 15;
+
+    // Check Input Address
+    if( countChar(ipAddress, '.' != 3) ) {
+        throw ClientException("Error: IP address can only have three periods", 0);
+    }
+
+    if( ipAddress.size() > LONGEST_POSSIBLE_IPV4 ) {
+        throw ClientException("Error: IP address was longer than expected", 0);
+    }
+
+    for( char chr : ipAddress ) {
+        if( ! isdigit(chr) && (chr != '.') ) {
+            throw ClientException("Error: IPv4 address expects only numeric types", 0);
+        }
+    }
+
+    octets = split(ipAddress, '.') ;
+    for( std::string octet : octets ) {
+        if( std::stoi(octet) > 255 ) {
+            throw ClientException("Error: An octet exceeds the valid range of an IP address", 0);
+        }
+    }
+    this->serverAddr = ipAddress;
     return;
 }
 
@@ -136,17 +171,19 @@ void Client::connectToServer()
     }
 
     // Proceed with Connection
-    this->serverAddr = {
+    this->server = {
         AF_INET,
-        htons(this->serverSocket),
+        htons(this->serverPort),
         INADDR_ANY};
 
     // Server running on Localhost
-    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    // server.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    if (connect(this->clientSocket, (struct sockaddr *)&this->serverAddr, sizeof(this->serverAddr)) < 0)
+    server.sin_addr.s_addr = inet_addr( this->serverAddr.c_str() );
+
+    if (connect(this->clientSocket, (struct sockaddr *)&this->server, sizeof(this->server)) < 0)
     {
-        throw ClientException("ERROR: Client could not connect on provided port", 2);
+        throw ClientException( std::format("ERROR: Client could not connect to {}:{}", (server.sin_addr.s_addr), (this->serverPort) ), 2);
     }
 
     // Update state to REQ(UEST) STAGE, indicates client is ready to send request to server
@@ -251,38 +288,66 @@ void Client::sendRequestSrv()
 
 int main(int argc, char **argv)
 {
-    Client hello_client;
+    Client clientObject;
+
     int port(39554);
+
+    std::string ipAddress;
+    try {
+
+        switch( argc ) {
+            // User Passed NO Arguments to CLI
+            case 1:
+                std::cerr << "usage: CamClient <ip-address> [port]" << std::endl;
+                return RETURN_USR_ERR;
+
+            // User Passed One Argument to CLI
+            case 2:
+                ipAddress = argv[1];
+                clientObject.setServerAddress( ipAddress );
+                clientObject.setServerPort( port );
+                break;
+
+            // User passed Two Arguments in CLI
+            case 3:
+                ipAddress = argv[1];
+                port = std::stoi(argv[2]);
+                clientObject.setServerAddress( ipAddress );
+                clientObject.setServerPort( port );
+                break;
+
+            // User likely passed more than 2 Arguments
+            default:
+                std::cerr << "usage: CamClient <ip-address> [port]" << std::endl;
+                return RETURN_USR_ERR;
+        }
+
+    // Client Exception Thrown
+    } catch ( ClientException& exc ) {
+        std::cerr << "Error: " << exc.what << "\n";
+        std::cerr << "usage: CamClient <ip-address> [port]" << std::endl;
+    }  
+
+    // Standard Exception thrown
+    catch ( std::exception& exc ) {
+        std::cerr << "Error: " << exc.what() << "\n";
+        std::cerr << "usage: CamClient <ip-address> [port]" << std::endl;
+    }
+
+    std::cout << std::format("Server Address: {}\n", clientObject.getServerAddress() );
+    std::cout << std::format("Server Port: {}\n", clientObject.getServerPort());
 
     try
     {
-        if (argc < 2)
-        {
-            hello_client.setServerSocket(port);
-            hello_client.connectToServer();
-            hello_client.sendRequestSrv();
-        }
-        else
-        {
-            try
-            {
-                port = std::stoi(argv[1]);
-            }
-            catch (std::exception &exc)
-            {
-                std::cerr << "Invalid Port Specified: " << std::endl;
-                return RETURN_USR_ERR;
-            }
-
-            hello_client.setServerSocket(port);
-            hello_client.connectToServer();
-            hello_client.sendRequestSrv();
-        }
+        clientObject.connectToServer();
+        clientObject.sendRequestSrv();
     }
     catch (std::exception &exc)
     {
         std::cerr << "An Unexpected Error Occurred: " << exc.what() << std::endl;
     }
-
+    catch( ClientException& exc ) {
+        std::cout << "Client Exception: " << exc.what << std::endl;
+    }
     return RETURN_OK;
 }
