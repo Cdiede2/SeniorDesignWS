@@ -73,14 +73,6 @@ void Client::sendRequestSrv()
     requestHash = md5(request.dump().c_str());
     request["hash"] = requestHash;
 
-    // // DEBUG
-    // unsigned char buFF[1024];
-    // std::string hash = md5("hello");
-    // std::cout << "MD5 hash: " << hash << std::endl;
-
-
-
-
     // Place Request in Buffer, check size constraints 
     size_t requestSize = request.dump().size();
     if ( requestSize > 1023 ) {
@@ -144,6 +136,8 @@ void Client::sendRequestSrv()
     }
 }
 
+/////////////////////////////////////
+// Accessors
 /**
  * @brief Sets the server socket for the client.
  *
