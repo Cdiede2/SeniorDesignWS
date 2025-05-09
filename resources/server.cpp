@@ -162,6 +162,7 @@ cv::Mat Server::getCameraFrame()
 
     if (img.empty())
     {
+        std::cerr << "Camera::FAILURE: Camera was read, but no media was created" << std::endl;
         throw ServerException("Camera::ERROR: Camera was read, but no media was created", 0);
     }
     else if (filtered.empty())
@@ -216,8 +217,16 @@ void Server::client_handle(int client_socket)
 
     this->state = REQ_STAGE;
 
+    ////
     // Process Image into frames, store frames in resultant_imgs
-    imageProc( img, filters,  resultant_imgs );
+    try {
+        img = getCameraFrame();
+        imageProc( img, filters,  resultant_imgs );
+    } catch( ServerException& exc ) {
+        std::cerr << "Server Error: " << exc.what() << std::endl;
+        close(client_socket);
+        return;
+    }
 
 
     int frame_id = 1;
@@ -254,7 +263,7 @@ void Server::client_handle(int client_socket)
         cv::imencode(".png", img, buff);
         size = buff.size();
 
-        std::cout << size << std::endl;
+        std::cout << "Image Size (bytes): " << size << std::endl;
 
         // FIRST: Send client the compressed image buffer size
         // Second: Send the entire compressed image data over socket
