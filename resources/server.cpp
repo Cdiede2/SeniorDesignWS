@@ -225,8 +225,8 @@ void Server::client_handle(int client_socket)
     int frame_id = 1;
     for( auto pair : resultant_imgs ) {
         std::cout << "MD5 Hash: " << pair.second << std::endl;
-        cv::imshow(std::format("Frame ID: {}", frame_id++).c_str(),pair.first);
-        cv::waitKey(0);
+        // cv::imshow(std::format("Frame ID: {}", frame_id++).c_str(),pair.first);
+        // cv::waitKey(0);
     }
     // if( !success ) {
     //     throw ServerException("ImageProc::ERROR: Failed to process frames", 0);

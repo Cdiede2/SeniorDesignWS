@@ -61,11 +61,14 @@ int main(int argc, char **argv)
     }
     catch (ServerException &exc)
     {
-        std::cerr << exc.what() << std::endl;
+        std::cerr << "ServerException:\n" << exc.what() << std::endl;
+    }
+    catch ( cv::Exception &exc) {
+        std::cerr << "OpenCV::Exception:\n" << exc.what() << std::endl;
     }
     catch (std::exception &exc)
     {
-        std::cerr << exc.what() << std::endl;
+        std::cerr << "Std::Exceeption:\n" << exc.what() << std::endl;
     }
     return RETURN_OK;
 }
