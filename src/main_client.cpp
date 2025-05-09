@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 
     // Client Exception Thrown
     } catch ( ClientException& exc ) {
-        std::cerr << "Error: " << exc.what << "\n";
+        std::cerr << "Error: " << exc.what() << "\n";
         std::cerr << "usage: CamClient <ip-address> [port]" << std::endl;
     }  
 
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
         std::cerr << "An Unexpected Error Occurred: " << exc.what() << std::endl;
     }
     catch( ClientException& exc ) {
-        std::cout << "Client Exception: " << exc.what << std::endl;
+        std::cout << "Client Exception: " << exc.what() << std::endl;
     }
     return RETURN_OK;
 }

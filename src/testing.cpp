@@ -10,7 +10,6 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 
-
 #include "shannon-fano.h"
 #include "camera.h"
 #include "client.h"
@@ -47,6 +46,19 @@ TEST(STRING_MANIP_STRIP, Empty_Delims)
     input = "__hello__";
     EXPECT_NO_THROW(output = strip(input, ""));
     EXPECT_EQ("__hello__", output);
+}
+
+TEST(STRING_MANIP_STRIP, Only_Delims)
+{
+    std::string test_one{"_"};
+    std::string test_two{"__"};
+
+    std::string output;
+    EXPECT_NO_THROW(output = strip(test_one, "_"));
+    EXPECT_EQ(output, "");
+
+    EXPECT_NO_THROW(output = strip(test_two, "_"));
+    EXPECT_EQ(output, "");
 }
 
 TEST(STRING_MANIP_STRIP, Left_Delims)
@@ -181,18 +193,55 @@ TEST(STRING_MANIP_SPLIT, Non_Empty_String_Forward_Backward_Delim)
     EXPECT_EQ("dog", result.at(8));
 }
 
-/* Camera Tests */
-TEST(CAMERA_TEST, Camera_Init) {
-    EXPECT_TRUE(true);
+TEST(STRING_MANIP_SPLIT, Non_Empty_String_All_Delim)
+{
+    std::string str{"..."};
+    std::vector<std::string> output;
+    output = split(str, '.');
+
+    EXPECT_EQ(output.size(), 1);
+    EXPECT_EQ(output.at(0), "");
 }
 
+/* String Manipulation Functions: countChar() */
+TEST(CountChar, CountChar_Empty)
+{
+    std::string empty_string;
+    EXPECT_EQ(countChar(empty_string, '.'), 0);
+}
+
+TEST(CountChar, CountChar_Non_Empty_No_Delim)
+{
+    std::string helloWorld{"Hello World!"};
+    std::string randomChar{"/1/234/5652/1was/vvv"};
+
+    EXPECT_EQ(countChar(helloWorld, '.'), 0);
+    EXPECT_EQ(countChar(randomChar, ' '), 0);
+}
+
+TEST(CountChar, CountChar_Non_Empty_Delim)
+{
+    std::string str{"the quick fox jumped over the lazy brown dog."};
+
+    EXPECT_EQ(countChar(str, 't'), 2);
+    EXPECT_EQ(countChar(str, 'h'), 2);
+    EXPECT_EQ(countChar(str, 'e'), 4);
+    EXPECT_EQ(countChar(str, ' '), 8);
+    EXPECT_EQ(countChar(str, 'q'), 1);
+    EXPECT_EQ(countChar(str, 'u'), 2);
+    EXPECT_EQ(countChar(str, 'g'), 1);
+    EXPECT_EQ(countChar(str, '.'), 1);
+
+    std::string ip_addr{"127.0.0.1."};
+    EXPECT_EQ(countChar(ip_addr, '.'), 4);
+}
 
 /* Tests of MD5 Hashing Algorithm */
 // TEST(MD5, MD5_String)
 // {
 //     MD5_CTX ctx;
 //     uint8_t digest[16];
-// 
+//
 //     std::vector<std::string> inputs = {
 //         "",
 //         "a",
@@ -202,7 +251,7 @@ TEST(CAMERA_TEST, Camera_Init) {
 //         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
 //         "12345678901234567890123456789012345678901234567890123456789012345678901234567890",
 //     };
-// 
+//
 //     std::vector<std::string> expected_hashes = {
 //         "d41d8cd98f00b204e9800998ecf8427e",
 //         "0cc175b9c0f1b6a831c399e269772661",
@@ -212,19 +261,19 @@ TEST(CAMERA_TEST, Camera_Init) {
 //         "d174ab98d277d9f5a5611c2c9f419d9f",
 //         "57edf4a22be3c955ac49da2e2107b67a",
 //     };
-// 
+//
 //     size_t i = 0;
 //     for (std::string &input : inputs)
 //     {
 //         std::string result;
 //         MD5(reinterpret_cast<const unsigned char *>(input.c_str()), input.size(), digest);
-// 
+//
 //         result = convertHashToString(digest);
 //         EXPECT_EQ(result, expected_hashes[i]);
 //         i++;
 //     }
 // }
-// 
+//
 // TEST(MD5, MD5_File)
 // {
 //     MD5_CTX ctx;
@@ -235,7 +284,7 @@ TEST(CAMERA_TEST, Camera_Init) {
 //         std::cerr << "Could not open file for reading." << std::endl;
 //         return;
 //     }
-// 
+//
 //     MD5_Init(&ctx);
 //     char buffer[1024];
 //     while (file.read(buffer, sizeof(buffer)))
@@ -244,9 +293,9 @@ TEST(CAMERA_TEST, Camera_Init) {
 //         MD5_Update(&ctx, buffer, file.gcount());
 //     }
 //     file.close();
-// 
+//
 //     MD5_Final(digest, &ctx);
-// 
+//
 //     std::string result = convertHashToString(digest);
 //     // std::cout << "MD5 hash of file: " << result << std::endl;
 //     // EXPECT_EQ(result, "57edf4a22be3c955ac49da2e2107b67a");
@@ -278,21 +327,6 @@ TEST(SFComp, SFComp_SingleChar)
     EXPECT_EQ(frequencies['a'], 1.0);
 }
 
-/* Test Parse Header */
-// TEST(PARSE_HEADER, Normal_Header) {
-//     CamHeader header = parseHeader("0/80/64");
-//     EXPECT_EQ(header.protocol, 0);
-//     EXPECT_EQ(header.flags, 0x80);
-//     EXPECT_EQ(header.seq_num, 64);
-// }
-
-// TEST(PARSE_HEADER, Invalid_Header) {
-//     EXPECT_ANY_THROW(parseHeader("0/80/64/extra"));
-//     EXPECT_ANY_THROW(parseHeader("0/80"));
-//     EXPECT_ANY_THROW(parseHeader("0"));
-//     EXPECT_ANY_THROW(parseHeader("0:80:64:extra"));
-// }
-
 /* Test JSON Serialization */
 TEST(JSON, Generic_JSON_Serialization)
 {
@@ -302,7 +336,7 @@ TEST(JSON, Generic_JSON_Serialization)
     j["is_student"] = false;
 
     std::string jsonString = j.dump();
-    std::cout << "Serialized JSON: " << jsonString << std::endl;
+    // std::cout << "Serialized JSON: " << jsonString << std::endl;
 
     nlohmann::json parsedJson = nlohmann::json::parse(jsonString);
     EXPECT_EQ(parsedJson["name"], "John Doe");
@@ -310,29 +344,86 @@ TEST(JSON, Generic_JSON_Serialization)
     EXPECT_EQ(parsedJson["is_student"], false);
 }
 
-TEST(JSON, SF_JSON_Serialization) {
+TEST(JSON, SF_JSON_Serialization)
+{
     ShannonFano sf;
     std::map<char, double> frequencies;
     std::string input = "hello world";
- 
-    EXPECT_NO_THROW( sf.buildCodes(frequencies, input) );
- 
+
+    EXPECT_NO_THROW(sf.buildCodes(frequencies, input));
+
     std::map<char, std::string> codes = sf.getCodes();
-    
+
     nlohmann::json j = codes;
 
     std::string jsonString = nlohmann::json(codes).dump();
-    std::cout << "Serialized JSON: " << j.dump(2) << std::endl;
+    // std::cout << "Serialized JSON: " << j.dump(2) << std::endl;
 }
 
 /* Test Client Code */
-TEST(Client, Init) {
-    EXPECT_NO_THROW( Client test );
+TEST(Client, Init)
+{
+    EXPECT_NO_THROW(Client test);
     Client test_two;
 
-    EXPECT_EQ( test_two.getCurrentState(), state::IDLE_STAGE );
+    EXPECT_EQ(test_two.getCurrentState(), state::IDLE_STAGE);
+    EXPECT_EQ(test_two.getServerPort(), 39554);
+    EXPECT_EQ(test_two.getServerAddress(), std::string("255.255.255.255"));
+    EXPECT_ANY_THROW(test_two.connectToServer());
+    EXPECT_ANY_THROW(test_two.sendRequestSrv());
 }
 
+TEST(Client_Client, Input_Validation_Server_Address_Simple)
+{
+    Client test;
+
+    EXPECT_NO_THROW(test.setServerAddress("127.0.0.1"));
+    EXPECT_NO_THROW(test.setServerAddress("192.168.1.1"));
+    EXPECT_ANY_THROW(test.setServerAddress("0.0.0.0"));
+}
+
+TEST(Client_setServerAddress, Input_Validation_Server_Address_Empty_Input)
+{
+    Client test;
+
+    EXPECT_ANY_THROW(test.setServerAddress(""));
+    EXPECT_ANY_THROW(test.setServerAddress("."));
+    // EXPECT_ANY_THROW(test.setServerAddress("..."));
+    // EXPECT_ANY_THROW(test.setServerAddress("...."));
+}
+
+TEST(Client_setServerAddress, Input_Validation_Server_Address_Complex_Errors)
+{
+    Client test;
+
+    EXPECT_ANY_THROW(test.setServerAddress("127.0.0.1."));
+    EXPECT_ANY_THROW(test.setServerAddress(".127.0.0.1"));
+    EXPECT_ANY_THROW(test.setServerAddress(".127.0...0.1"));
+    EXPECT_ANY_THROW(test.setServerAddress("127.0.1"));
+    EXPECT_ANY_THROW(test.setServerAddress("127.0.1."));
+    EXPECT_ANY_THROW(test.setServerAddress("127..0.1"));
+    EXPECT_ANY_THROW(test.setServerAddress(".127.0.1"));
+}
+
+TEST(Client_setServerPort, Valid_Addresses)
+{
+    Client clientObject;
+
+    EXPECT_EQ(clientObject.getServerPort(), 39554);
+
+    EXPECT_NO_THROW(clientObject.setServerPort(1024));
+    EXPECT_EQ(clientObject.getServerPort(), 1024);
+
+    EXPECT_NO_THROW(clientObject.setServerPort(65535));
+    EXPECT_EQ(clientObject.getServerPort(), 65535);
+}
+
+TEST(Client_setServerPort, Invalid_Addresses)
+{
+    Client clientObject;
+    EXPECT_ANY_THROW( clientObject.setServerPort(-1) );
+    EXPECT_ANY_THROW( clientObject.setServerPort(65536) );
+}
 
 /* Utility Functions */
 std::string convertHashToString(const uint8_t *digest)

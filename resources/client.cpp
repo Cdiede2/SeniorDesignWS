@@ -154,7 +154,7 @@ void Client::sendRequestSrv()
  *               Must be a positive integer within the range [1, 65535].
  *
  * @throws std::exception If the client is not in the IDLE state.
- * @throws std::exception If the provided socket value is invalid (not in the range [1, 65535]).
+ * @throws std::exception If the provided socket value is invalid (not in the range [1024, 65535]).
  */
 void Client::setServerPort(int socket)
 {
@@ -165,7 +165,7 @@ void Client::setServerPort(int socket)
     }
 
     // Check socket is valid
-    if (socket > 0 && socket < 65536)
+    if (socket > 1023 && socket < 65536)
     {
         this->serverPort = socket;
     }
@@ -203,7 +203,7 @@ void Client::setServerAddress( const std::string& ipAddress ) {
     static const int LONGEST_POSSIBLE_IPV4 = 15;
 
     // Check Input Address
-    if( countChar(ipAddress, '.' != 3) ) {
+    if( countChar(ipAddress, '.') != 3 ) {
         throw ClientException("Error: IP address can only have three periods", 0);
     }
 
@@ -218,10 +218,20 @@ void Client::setServerAddress( const std::string& ipAddress ) {
     }
 
     octets = split(ipAddress, '.') ;
+    if( octets.size() != 4 ) {
+        throw ClientException( std::format("Error: Expected 4 octets but got {}", octets.size()), 0 );
+    }
+
     for( std::string octet : octets ) {
         if( std::stoi(octet) > 255 ) {
             throw ClientException("Error: An octet exceeds the valid range of an IP address", 0);
         }
+    }
+
+    // TODO: Prevent any broadcast address from being accepted
+    // NOTE: Sufficient for now
+    if( ipAddress == "0.0.0.0" ) {
+        throw ClientException("Error: Server IP should not be set to broadcast address");
     }
     this->serverAddr = ipAddress;
     return;

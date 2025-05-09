@@ -46,8 +46,8 @@ class Client
 {
 public:
     // Constructor
-    Client() : serverPort(39554), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
-    Client(int port) : serverPort(port), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
+    Client() : serverAddr("255.255.255.255"), serverPort(39554), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
+    Client(int port) : serverAddr("255.255.255.255"), serverPort(port), state(IDLE_STAGE), clientSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
 
     // Deconstructor
     ~Client();

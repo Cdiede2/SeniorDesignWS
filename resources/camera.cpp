@@ -34,6 +34,30 @@ std::ostream &operator<<(std::ostream &ostr, const std::vector<Filter> &filters)
 std::string strip(const std::string &input, const std::string delims)
 {
     std::string::const_iterator left = input.cbegin();
+    size_t l_places = 0;
+
+    std::string::const_reverse_iterator right = input.crbegin();
+    size_t r_places = 0;
+
+    while( (left != input.cend()) && ( delims.find(*left) != std::string::npos ) ) {
+        l_places += 1;
+        left++;
+    }
+
+    while( (right != input.crend()) && ( delims.find(*right) != std::string::npos ) ) {
+        r_places += 1;
+        right++;
+    }
+
+    if( left == input.cend() ) {
+        return "";
+    }
+    else {
+        return input.substr( l_places, input.size() - l_places - r_places );
+    }
+
+    /*
+    std::string::const_iterator left = input.cbegin();
     std::string::const_iterator right = input.end();
     std::string result;
 
@@ -55,6 +79,7 @@ std::string strip(const std::string &input, const std::string delims)
         result.push_back(*left++);
     }
     return result;
+    */
 }
 
 std::vector<std::string> split(const std::string &input, char delim)
@@ -63,6 +88,7 @@ std::vector<std::string> split(const std::string &input, char delim)
     std::vector<std::string> strVec;
     if (!input.size())
         return {""};
+
 
     size_t pos = 0;
     size_t next = workingStr.find(delim, pos);
