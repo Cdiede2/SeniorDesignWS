@@ -68,7 +68,7 @@ int main(int argc, char **argv)
     }
     catch (std::exception &exc)
     {
-        std::cerr << "Std::Exceeption:\n" << exc.what() << std::endl;
+        std::cerr << "Std::Exception:\n" << exc.what() << std::endl;
     }
     return RETURN_OK;
 }

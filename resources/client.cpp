@@ -91,6 +91,7 @@ void Client::sendRequestSrv()
 
 
 
+    //// Client Receives JSON header indicating number of frames to be sent
     // Request Sent, wait for FIN response indicating last packet/frame
     send(clientSocket, reinterpret_cast<const char *>("Client HELO"), 20, 0);
     recv(clientSocket, buffer, sizeof(buffer), 0);
@@ -109,6 +110,7 @@ void Client::sendRequestSrv()
         recv(clientSocket, &buff_size, sizeof(size_t), 0);
         mem_buffer.resize(buff_size);
 
+        //// Client Receives SINGLE Image here
         // Receive data into buffer on client, decode into cv::Mat object
         recv(clientSocket, mem_buffer.data(), buff_size, 0);
         img = cv::imdecode(mem_buffer, cv::IMREAD_COLOR);

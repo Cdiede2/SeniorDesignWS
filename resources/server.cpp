@@ -181,7 +181,8 @@ cv::Mat Server::getCameraFrame()
 void Server::client_handle(int client_socket)
 {
     char buffer[1024] = {0};
-    cv::Mat img = cv::imread("../image.jpg", cv::IMREAD_COLOR);
+    // cv::Mat img = cv::imread("../image.jpg", cv::IMREAD_COLOR);
+    cv::Mat img;
     nlohmann::json recvRequest;
     std::string hash;
     std::string str_buffer;
@@ -214,28 +215,21 @@ void Server::client_handle(int client_socket)
     std::cout << recvRequest["frames"][0] << recvRequest["frames"][1] << recvRequest["frames"][2] << std::endl;
 
     this->state = REQ_STAGE;
-    try {
-        bool success = imageProc( img, filters,  resultant_imgs );
 
-    } catch( ServerException& exc ) {
-        std::cerr << exc.what() << std::endl;
-        return;
-    }
+    // Process Image into frames, store frames in resultant_imgs
+    imageProc( img, filters,  resultant_imgs );
+
 
     int frame_id = 1;
     for( auto pair : resultant_imgs ) {
         std::cout << "MD5 Hash: " << pair.second << std::endl;
-        // cv::imshow(std::format("Frame ID: {}", frame_id++).c_str(),pair.first);
-        // cv::waitKey(0);
     }
-    // if( !success ) {
-    //     throw ServerException("ImageProc::ERROR: Failed to process frames", 0);
-    // }
 
     // Does not work on unconfigured WSL
     // Check: https://askubuntu.com/questions/1405903/capturing-webcam-video-with-opencv-in-wsl2
     // getCameraFrame();
 
+    ////
     // Receive Client Hello
     recv(client_socket, buffer, sizeof(buffer), 0);
 
