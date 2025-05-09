@@ -55,8 +55,6 @@ private:
     void buildCodesRecursive(std::vector<std::pair<char, double>> &freqs, std::string code, size_t start, size_t end);
 };
 
-
-
 template <class T>
 std::vector<T> quicksort(std::vector<T> &input)
 {

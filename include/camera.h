@@ -1,5 +1,3 @@
-
-
 #pragma once
 #define CAMERA_H
 
@@ -9,20 +7,7 @@
 #include <iomanip>
 #include <openssl/evp.h>
 
-/**
- * @brief Struct containing elements of a header
- * @param protocol Unused for now, default set to 0
- * @param flags Stores flags as indicators between server and client
- * @param seq_num Sequence number of header
- * @param size Size of following payload, used to allocate buffer size prior to transmission
- */
-// struct CamHeader
-// {
-//     uint8_t protocol;
-//     uint8_t flags; // Start || Listen  ||  Set Encode || Response || End || Unused...
-//     uint16_t seq_num;
-//     uint32_t size;
-// };
+
 
 struct ClientException
 {
@@ -43,35 +28,12 @@ struct Filter
     uint8_t _blu;
 };
 
-bool operator==(const Filter &left, const Filter &right)
+enum numbers
 {
-    if (left._red == right._red && left._grn == right._grn && left._blu == right._blu)
-    {
-        return true;
-    }
-    return false;
-}
-
-std::ostream &operator<<(std::ostream &ostr, const Filter &filter)
-{
-
-    ostr << std::hex << std::setw(3) << (int)filter._red << " ";
-    ostr << std::hex << std::setw(3) << (int)filter._grn << " ";
-    ostr << std::hex << std::setw(3) << (int)filter._blu << " ";
-    ostr << std::dec;
-    return ostr;
-}
-
-std::ostream &operator<<(std::ostream &ostr, const std::vector<Filter> &filters)
-{
-    ostr << " +--------------+" << std::endl;
-    for (auto filter : filters)
-    {
-        ostr << " | " << filter << " |" << std::endl;
-    }
-    ostr << " +--------------+" << std::endl;
-    return ostr;
-}
+    RETURN_OK,
+    RETURN_NETWORK_ERR,
+    RETURN_USR_ERR
+};
 
 enum SatColor
 {
@@ -79,6 +41,22 @@ enum SatColor
     GREEN,
     BLUE
 };
+
+/**
+ * @brief Compares two Filter objects for equality.
+ * 
+ * @param left The first Filter object to compare.
+ * @param right The second Filter object to compare.
+ * @return true if the red, green, and blue components of both Filter objects are equal; otherwise, false.
+ * @details This operator checks if the _red, _grn, and _blu fields of the two Filter objects are identical.
+ * It returns true if all three components match, otherwise it returns false.
+ */
+bool operator==(const Filter &left, const Filter &right);
+
+
+std::ostream &operator<<(std::ostream &ostr, const Filter &filter);
+
+std::ostream &operator<<(std::ostream &ostr, const std::vector<Filter> &filters);
 
 /**
  * @brief Removes leading and trailing characters from a string based on a set of delimiters.
@@ -89,31 +67,7 @@ enum SatColor
  * specified in the `delims` parameter from the start and end of the string. If the input string
  * is empty, it returns an empty string. The function preserves the order of the remaining characters.
  */
-std::string strip(const std::string &input, const std::string delims)
-{
-    std::string::const_iterator left = input.cbegin();
-    std::string::const_iterator right = input.end();
-    std::string result;
-
-    if (!input.size())
-    {
-        return "";
-    }
-    while (delims.find(*left) != std::string::npos)
-    {
-        left++;
-    }
-    while (delims.find(*(right - 1)) != std::string::npos)
-    {
-        right--;
-    }
-
-    while (left != right)
-    {
-        result.push_back(*left++);
-    }
-    return result;
-}
+std::string strip(const std::string &input, const std::string delims);
 
 /**
  * @brief Splits a string into a vector of substrings based on a delimiter character.
@@ -125,37 +79,20 @@ std::string strip(const std::string &input, const std::string delims)
  * within the string and extracts substrings between occurrences of the delimiter.
  * The resulting substrings are stored in a vector, which is returned as the output.
  */
-std::vector<std::string> split(const std::string &input, char delim)
-{
-    std::string workingStr = strip(input, {delim});
-    std::vector<std::string> strVec;
-    if (!input.size())
-        return {""};
-
-    size_t pos = 0;
-    size_t next = workingStr.find(delim, pos);
-    strVec.push_back(workingStr.substr(pos, next - pos));
-
-    pos = next;
-    while (pos != std::string::npos)
-    {
-        next = workingStr.find(delim, pos + 1);
-        strVec.push_back(workingStr.substr(pos + 1, next - pos - 1));
-        pos = next;
-    }
-    return strVec;
-}
+std::vector<std::string> split(const std::string &input, char delim);
 
 /**
+ * @brief Counts the occurrences of a specific character in a string.
  * 
+ * @param input The input string in which to count occurrences of the character.
+ * @param delim The character to count within the input string.
+ * @return The number of times the specified character appears in the input string.
+ * 
+ * @details This function iterates through each character in the input string and increments
+ * a counter whenever the specified character (`delim`) is encountered. The final count is
+ * returned as an integer. If the input string is empty, the function returns 0.
  */
-int countChar( const std::string& input, char delim ) {
-    int sum = 0;
-    for( char chr : input ) {
-        sum += (chr == delim)?1:0;
-    }
-    return sum;
-}
+int countChar( const std::string& input, char delim );
 
 /**
  * @brief Parses a header string into a CamHeader structure.
@@ -193,25 +130,7 @@ int countChar( const std::string& input, char delim ) {
  * @ref Thank you Michael!
  * https://stackoverflow.com/questions/7860362/how-can-i-use-openssl-md5-in-c-to-hash-a-string
  */
-std::string md5(const std::string &content)
-{
-    EVP_MD_CTX *context = EVP_MD_CTX_new();
-    const EVP_MD *md = EVP_md5();
-    unsigned char md_value[EVP_MAX_MD_SIZE];
-    unsigned int md_len;
-    std::string output;
-
-    EVP_DigestInit_ex2(context, md, NULL);
-    EVP_DigestUpdate(context, content.c_str(), content.length());
-    EVP_DigestFinal_ex(context, md_value, &md_len);
-    EVP_MD_CTX_free(context);
-
-    output.resize(md_len * 2);
-    for (unsigned int i = 0; i < md_len; ++i)
-        std::sprintf(&output[i * 2], "%02x", md_value[i]);
-    return output;
-}
-
+std::string md5(const std::string &content);
 
 // class Pixel
 // {

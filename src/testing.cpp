@@ -12,7 +12,6 @@
 
 
 #include "shannon-fano.h"
-
 #include "camera.h"
 // #include "md5.h"
 
@@ -335,7 +334,10 @@ TEST(JSON, SF_JSON_Serialization) {
     std::cout << "Serialized JSON: " << j.dump(2) << std::endl;
 }
 
+/* Test Client Code */
+TEST(Client, Init) {
 
+}
 
 /* Utility Functions */
 std::string convertHashToString(const uint8_t *digest)

@@ -15,9 +15,9 @@ find_package(OpenCV REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 # Add source files
-add_executable(CamServer src/server.cpp src/shannon-fano.cpp)
-add_executable(CamClient src/client.cpp)
-add_executable(Test_Pkg src/test.cpp src/shannon-fano.cpp)
+add_executable(CamServer src/main_server.cpp resources/server.cpp resources/camera.cpp resources/shannon-fano.cpp )
+add_executable(CamClient src/main_client.cpp resources/client.cpp resources/camera.cpp resources/shannon-fano.cpp )
+add_executable(Testing src/testing.cpp resources/camera.cpp resources/shannon-fano.cpp resources/client.cpp resources/server.cpp)
 
 
 # Include Directories: Camera Server
@@ -33,10 +33,10 @@ target_link_libraries(CamClient PRIVATE OpenSSL::Crypto ${OpenCV_LIBS})
 target_link_libraries(CamClient PRIVATE nlohmann_json::nlohmann_json)
 
 # Include Directories: Test Package
-target_include_directories(Test_Pkg PRIVATE include)
-target_include_directories(Test_Pkg PRIVATE ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(Test_Pkg PRIVATE OpenSSL::Crypto ${OpenCV_LIBS} gtest gtest_main)
-target_link_libraries(Test_Pkg PRIVATE nlohmann_json::nlohmann_json)
+target_include_directories(Testing PRIVATE include)
+target_include_directories(Testing PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(Testing PRIVATE OpenSSL::Crypto ${OpenCV_LIBS} gtest gtest_main)
+target_link_libraries(Testing PRIVATE nlohmann_json::nlohmann_json)
 
 # Link libraries
 # target_link_libraries(ProjectName PRIVATE some_library)
