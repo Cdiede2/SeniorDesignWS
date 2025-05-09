@@ -66,6 +66,7 @@ public:
     uint8_t getCurrentState() const { return this->state; }
     std::string getServerAddress() const;
     int getServerPort() const;
+
 private:
     uint8_t state;
     int serverPort;

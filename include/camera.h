@@ -11,14 +11,16 @@
 
 struct ClientException
 {
-    std::string what;
+    std::string __what__;
     uint8_t val;
+    std::string what(){ return __what__; }
 };
 
 struct ServerException
 {
-    std::string what;
+    std::string __what__;
     uint8_t val;
+    std::string what(){ return __what__; }
 };
 
 struct Filter

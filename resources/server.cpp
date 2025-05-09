@@ -3,6 +3,53 @@
 
 #include "server.h"
 
+
+void Server::setListeningPort( int port ) {
+    if( ! ( 0 < port && port < 65535 ) ) {
+        throw ServerException("error: port number invalid", 0);
+    }
+    this->serverPort = port;
+    return;
+}
+
+void Server::setListeningAddress( const std::string& listeningAddress ) {
+    static const int LONGEST_POSSIBLE_IPV4 = 15;
+    std::vector<std::string> octets;
+
+    // Check Input Address
+    if( countChar(listeningAddress, '.') != 3) {
+        throw ServerException("Error: listening address can only have three periods", 0);
+    }
+
+    if( listeningAddress.size() > LONGEST_POSSIBLE_IPV4 ) {
+        throw ServerException("Error: listening address was longer than expected", 0);
+    }
+
+    for( char chr : listeningAddress ) {
+        if( ! isdigit(chr) && (chr != '.') ) {
+            throw ServerException("Error: IPv4 address expects only numeric types", 0);
+        }
+    }
+
+    octets = split( listeningAddress , '.' );
+    for( std::string octet : octets ) {
+        if( std::stoi(octet) > 255 ) {
+            throw ServerException("Error: An octet exceeds the valid range of an IP address", 0);
+        }
+    }
+    this->listenAddr = listeningAddress;
+    return;
+}
+
+// Data Accessors
+std::string Server::getListeningAddress() const {
+    return this->listenAddr;
+}
+
+int Server::getListeningPort() const {
+    return this->serverPort;
+}
+
 /**
  * @brief Set the server listening port and address
  * @param mAddr const char*: multicast listening address
@@ -17,7 +64,7 @@ void Server::setServerPort(const char *mAddr, int port)
 
         // throw ServerException("SETUP::ERROR: Invalid port range specified", 0);
     }
-    this->mcastAddr = mAddr;
+    this->listenAddr = mAddr;
     this->serverPort = static_cast<uint16_t>(port);
     return;
 }
@@ -38,15 +85,15 @@ void Server::setupServer()
     }
 
     // Setup Server Port
-    this->serverAddress = {
+    this->server_sin = {
         AF_INET,
         htons(this->serverPort),
         INADDR_ANY};
 
     // Listen on ALL IP addresses
-    serverAddress.sin_addr.s_addr = inet_addr(this->mcastAddr.c_str());
+    server_sin.sin_addr.s_addr = inet_addr(this->listenAddr.c_str());
 
-    bind(this->serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
+    bind(this->serverSocket, (struct sockaddr *)&server_sin, sizeof(server_sin));
     this->state = RDY_STAGE;
     return;
 }
@@ -62,7 +109,7 @@ void Server::serverLoop()
     }
 
     // Main Server Loop
-    std::cout << std::format("Server Listening on: {}", ntohs( this->serverAddress.sin_port) ) << std::endl;
+    std::cout << std::format("Server Listening on: {}", ntohs( this->server_sin.sin_port) ) << std::endl;
     std::cout << this->serverSocket << std::endl;
 
     cv::Mat image = cv::imread("../image.jpg", cv::IMREAD_COLOR);
@@ -171,7 +218,7 @@ void Server::client_handle(int client_socket)
         bool success = imageProc( img, filters,  resultant_imgs );
 
     } catch( ServerException& exc ) {
-        std::cerr << exc.what << std::endl;
+        std::cerr << exc.what() << std::endl;
         return;
     }
 

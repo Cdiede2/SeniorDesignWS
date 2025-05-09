@@ -65,19 +65,28 @@ public:
     Server(int port) : serverPort(port), state(IDLE_STAGE), serverSocket(socket(AF_INET, SOCK_STREAM, 0)) {};
 
     // Mutators
+    void setListeningAddress( const std::string& );
+    void setListeningPort( int port );
+
     void setServerPort(const char *mAddr, int port); // Setup the server Address and Port
     void setupServer();                              // Create listening socket
     cv::Mat getCameraFrame();                        // Access media and retrieve image
+
+    // Accessors
+    std::string getListeningAddress() const;
+    int getListeningPort() const;
 
     // Listening Loop
     void serverLoop(); // Main server loop
 
 private:
-    uint16_t serverPort;
+    std::string listenAddr;  // Listening address
+    int serverPort;
+    struct sockaddr_in server_sin;
+
     uint8_t state;
-    std::string mcastAddr;
+
     int serverSocket;
-    struct sockaddr_in serverAddress;
 
     // Private Client Handle
     void client_handle(int client_socket); // Client thread
