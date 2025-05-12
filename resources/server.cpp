@@ -152,7 +152,7 @@ cv::Mat Server::getCameraFrame()
         // Image Read, but filtered could not be produced
         } else if( filtered.empty() ){
             img = cv::imread("../assets/default.png");
-            std::cerr << "Could not product filtered frame" << std::endl;
+            std::cerr << "Could not produce filtered frame" << std::endl;
             if( img.empty() ) throw ServerException("Could not open default image", 0);
             return img;
         }
@@ -165,7 +165,9 @@ void Server::client_handle(int client_socket) {
     nlohmann::json request;
     std::vector<uchar> imgBuff;
     size_t buffer_size(0);
-    
+    std::vector<Filter> colorFilters;
+    std::vector<std::pair<cv::Mat, std::string>> frames;
+
     // Receive Request Size First, then receive request
     recv(client_socket, &buffer_size, sizeof(size_t), 0);
     buffer.resize(buffer_size);
@@ -179,22 +181,57 @@ void Server::client_handle(int client_socket) {
     if( request["state"] != "request" ) {
         throw ServerException("Client not in request state");
     }
+    colorFilters = buildFilterArray( request );
 
-    // Retrieve Camera Frame
+
+    // Retrieve Camera Image and Process into Frames
     cv::Mat img = getCameraFrame();
-    size_t img_buff_size(0);
-    cv::imencode( ".jpg", img, imgBuff );
-    img_buff_size = imgBuff.size();
+    imageProc(img, colorFilters, frames);
+    
+    // Send Client Number of Frames to Accept
+    // nlohmann::json j;
+    // j["num_frames"] = frames.size();
+    // send(client_socket, j.dump().data(), j.dump().size(), 0);
+    int numberFrames(frames.size());
 
+    send(client_socket, &numberFrames, sizeof(int), 0);
+    int i = 0;
+    std::cout << "Frames Size: " << frames.size() << std::endl;
+    std::cout << "Request Frames Size: " << request["frames"].size() << std::endl;
 
-    // Send Image to Client
-    send(client_socket, &img_buff_size, sizeof(size_t), 0);
-    send(client_socket, imgBuff.data(), img_buff_size, 0);
+    for( auto pair : frames ) {
+        size_t img_buff_size(0);
+
+        // Encode Frame
+        cv::imencode( ".png", pair.first, imgBuff );
+        img_buff_size = imgBuff.size();
+
+        // Send Integer Indicating Saturation Color
+        send(client_socket, &i, sizeof(int), 0);
+
+        // Send Frame to Client
+        send(client_socket, &img_buff_size, sizeof(size_t), 0);
+        send(client_socket, imgBuff.data(), img_buff_size, 0);
+
+        std::cout << "Filter: " << request["frames"].at(i) << std::endl;
+        std::cout << "MD5 Hash: " << pair.second << std::endl;
+
+        // DEBUG
+        buffer.resize(10);
+        recv(client_socket, buffer.data(), sizeof(10), 0);
+        // std::cout << "Received: " << buffer << std::endl;
+        std::cout << "Count: " << i << " of 3" << std::endl; 
+        i++;
+    }
+    std::cout << "--------------------" << std::endl;
+
+    
     
 
-    buffer.resize(10);
-    recv(client_socket, buffer.data(), sizeof(10), 0);
-    std::cout << "Received: " << buffer << std::endl;
+    ///////////
+    // std::vector<std::pair<cv::Mat, std::string>> frames;
+    // imageProc(  )
+
 
     close(client_socket);
     return;
@@ -347,18 +384,18 @@ bool Server::imageProc(const cv::Mat &input, const std::vector<Filter> &filters,
 {
 
     // Check input and filters are NOT EMPTY
-    if (this->state != REQ_STAGE)
-    {
-        throw ServerException(std::format("Image::Proc: In state ({}) when expected was REQ_STAGE(3)", this->state), 0);
-    }
-    else if (input.empty())
-    {
-        throw ServerException("ImageProc::ERROR: Passed input was empty", 0);
-    }
-    else if (!filters.size())
-    {
-        throw ServerException("ImageProc::ERROR: Filters array is empty", 0);
-    }
+    // if (this->state != REQ_STAGE)
+    // {
+    //     throw ServerException(std::format("Image::Proc: In state ({}) when expected was REQ_STAGE(3)", this->state), 0);
+    // }
+    // else if (input.empty())
+    // {
+    //     throw ServerException("ImageProc::ERROR: Passed input was empty", 0);
+    // }
+    // else if (!filters.size())
+    // {
+    //     throw ServerException("ImageProc::ERROR: Filters array is empty", 0);
+    // }
 
     // NOTE: For now, only color vectors RGB are supported
     assert(filters.at(0) == Filter(255, 0, 0));

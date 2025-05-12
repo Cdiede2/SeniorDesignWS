@@ -56,7 +56,7 @@ public:
     void connectToServer();
 
     void sendRequestSrv();
-    cv::Mat recvFrames();
+    std::vector<cv::Mat> recvFrames();
     
     void setServerPort(int socket);
     void setServerAddress(const std::string&);

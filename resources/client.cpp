@@ -63,37 +63,56 @@ void Client::sendRequestSrv() {
     send(clientSocket, &requestSize, sizeof(size_t), 0);
     send(clientSocket, request.dump().data(), requestSize, 0 );
 
-    cv::Mat img;
-    img = recvFrames();
+    std::vector<cv::Mat> imgs;
+    imgs = recvFrames();
    
     // recvFrames();
-    cv::imshow("Image", img);
-    cv::waitKey(0);
+    // cv::imshow("Image", img);
+    // cv::waitKey(0);
     return;
 }
 
-cv::Mat Client::recvFrames() {
-    size_t buffer_size(0);
-    size_t bytes_expected(0);
-    size_t bytes_received(0);
+std::vector<cv::Mat> Client::recvFrames() {
+    int numFrames(0);
 
     std::vector<uchar> buffer;
-    cv::Mat img;
+    std::vector<cv::Mat> imgs;
 
-    // Receive Buffer Size and Reshape
-    recv(this->clientSocket, &buffer_size, sizeof(size_t), 0);
-    buffer.resize(buffer_size);
-    bytes_expected = buffer_size;
-    while( bytes_received < bytes_expected ) {
-        bytes_received += recv(this->clientSocket, buffer.data() + bytes_received, buffer_size - bytes_received, 0);
+
+    // Receive Number of Frames to Accept
+    recv(clientSocket, &numFrames, sizeof(int), 0);
+    std::cout << "Number of Frames: " << numFrames << std::endl;
+    for( int i = 0; i < numFrames; i++ ) {
+        cv::Mat img;
+        size_t buffer_size(0);
+        size_t bytes_expected(0);
+        size_t bytes_received(0);
+        int saturationColor(-1);
+
+        // Receive Header for Frame
+        recv(this->clientSocket, &saturationColor, sizeof(int), 0);
+
+        // Receive Buffer Size and Reshape
+        recv(this->clientSocket, &buffer_size, sizeof(size_t), 0);
+        buffer.resize(buffer_size);
+        bytes_expected = buffer_size;
+
+        while( bytes_received < bytes_expected ) {
+            bytes_received += recv(this->clientSocket, buffer.data() + bytes_received, buffer_size - bytes_received, 0);
+        }
+
+        // DEBUG: Image Received in Full
+        send(clientSocket, reinterpret_cast<const char*>("OK"), sizeof(10), 0);
+
+        // Decode Image
+        imgs.push_back( cv::imdecode(buffer, cv::IMREAD_COLOR) );
     }
 
-    // Image Received in Full
-    send(clientSocket, reinterpret_cast<const char*>("OK"), sizeof(10), 0);
-
-    // Decode Image
-    img = cv::imdecode(buffer, cv::IMREAD_COLOR);
-    return img;
+    for( auto val : imgs ) {
+        cv::imshow("Frame", val);
+        cv::waitKey(0);
+    }
+    return imgs;
 }
 
 
