@@ -1,10 +1,11 @@
 #pragma once
 #define CAMERA_H
-
+#define LONGEST_POSSIBLE_IPV4 15
 #include <stdint.h>
 #include <vector>
 #include <string>
 #include <iomanip>
+#include <format>
 #include <openssl/evp.h>
 
 
@@ -17,6 +18,13 @@ struct ClientException
 };
 
 struct ServerException
+{
+    std::string __what__;
+    uint8_t val;
+    std::string what(){ return __what__; }
+};
+
+struct IpException
 {
     std::string __what__;
     uint8_t val;
@@ -44,6 +52,11 @@ enum SatColor
     BLUE
 };
 
+
+uint32_t validIPv4( const std::string& );
+
+bool validIPv4Listening( const std::string& );
+
 /**
  * @brief Compares two Filter objects for equality.
  * 
@@ -54,7 +67,6 @@ enum SatColor
  * It returns true if all three components match, otherwise it returns false.
  */
 bool operator==(const Filter &left, const Filter &right);
-
 
 std::ostream &operator<<(std::ostream &ostr, const Filter &filter);
 

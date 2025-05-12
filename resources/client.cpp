@@ -37,11 +37,11 @@ void Client::connectToServer()
     // Server running on Localhost
     // server.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    server.sin_addr.s_addr = inet_addr( this->serverAddr.c_str() );
+    server.sin_addr.s_addr = inet_addr(this->serverAddr.c_str());
 
     if (connect(this->clientSocket, (struct sockaddr *)&this->server, sizeof(this->server)) < 0)
     {
-        throw ClientException( std::format("ERROR: Client could not connect to {}:{}", (server.sin_addr.s_addr), (this->serverPort) ), 2);
+        throw ClientException(std::format("ERROR: Client could not connect to {}:{}", (server.sin_addr.s_addr), (this->serverPort)), 2);
     }
 
     // Update state to REQ(UEST) STAGE, indicates client is ready to send request to server
@@ -73,23 +73,23 @@ void Client::sendRequestSrv()
     requestHash = md5(request.dump().c_str());
     request["hash"] = requestHash;
 
-    // Place Request in Buffer, check size constraints 
+    // Place Request in Buffer, check size constraints
     size_t requestSize = request.dump().size();
-    if ( requestSize > 1023 ) {
-        throw ClientException( std::format("BAD_REQUEST::ERROR: Client Request Exceeded 1024 byte limit, Actual {}", requestSize), 1);
-    } else {
-        strcpy( buffer, request.dump().c_str() );
+    if (requestSize > 1023)
+    {
+        throw ClientException(std::format("BAD_REQUEST::ERROR: Client Request Exceeded 1024 byte limit, Actual {}", requestSize), 1);
+    }
+    else
+    {
+        strcpy(buffer, request.dump().c_str());
     }
     send(clientSocket, buffer, sizeof(buffer), 0);
 
-
-
     // Clear buffer
-    for(int i = 0; i < sizeof(buffer); i++) {
+    for (int i = 0; i < sizeof(buffer); i++)
+    {
         buffer[i] = '\0';
     }
-
-
 
     //// Client Receives JSON header indicating number of frames to be sent
     // Request Sent, wait for FIN response indicating last packet/frame
@@ -194,40 +194,11 @@ void Client::setServerPort(int socket)
  *         the maximum length, contains non-numeric characters, or has octets
  *         outside the valid range.
  */
-void Client::setServerAddress( const std::string& ipAddress ) {
-    std::vector<std::string> octets;
-    static const int LONGEST_POSSIBLE_IPV4 = 15;
-
-    // Check Input Address
-    if( countChar(ipAddress, '.') != 3 ) {
-        throw ClientException("Error: IP address can only have three periods", 0);
-    }
-
-    if( ipAddress.size() > LONGEST_POSSIBLE_IPV4 ) {
-        throw ClientException("Error: IP address was longer than expected", 0);
-    }
-
-    for( char chr : ipAddress ) {
-        if( ! isdigit(chr) && (chr != '.') ) {
-            throw ClientException("Error: IPv4 address expects only numeric types", 0);
-        }
-    }
-
-    octets = split(ipAddress, '.') ;
-    if( octets.size() != 4 ) {
-        throw ClientException( std::format("Error: Expected 4 octets but got {}", octets.size()), 0 );
-    }
-
-    for( std::string octet : octets ) {
-        if( std::stoi(octet) > 255 ) {
-            throw ClientException("Error: An octet exceeds the valid range of an IP address", 0);
-        }
-    }
-
-    // TODO: Prevent any broadcast address from being accepted
-    // NOTE: Sufficient for now
-    if( ipAddress == "0.0.0.0" ) {
-        throw ClientException("Error: Server IP should not be set to broadcast address");
+void Client::setServerAddress(const std::string &ipAddress)
+{
+    // Check that only valid IP Addresses are assigned
+    if( ! validIPv4(ipAddress) ) {
+        throw ClientException("ClientError: Server IP is invalid");
     }
     this->serverAddr = ipAddress;
     return;
@@ -242,7 +213,8 @@ void Client::setServerAddress( const std::string& ipAddress ) {
  *
  * @return An integer representing the server's port number.
  */
-int Client::getServerPort() const {
+int Client::getServerPort() const
+{
     return this->serverPort;
 }
 
@@ -255,6 +227,7 @@ int Client::getServerPort() const {
  *
  * @return A string containing the server's IP address.
  */
-std::string Client::getServerAddress() const {
+std::string Client::getServerAddress() const
+{
     return this->serverAddr;
 }

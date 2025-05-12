@@ -49,12 +49,13 @@ int main(int argc, char **argv)
         return RETURN_USR_ERR;
     }
 
+    try
+    {
     std::cout << "Server Listening Address: " << serverObject.getListeningAddress() << std::endl;
     std::cout << "Server Listening Port: " << serverObject.getListeningPort() << std::endl;
     // return RETURN_OK;
 
-    try
-    {
+    
         // Run Server Code
         serverObject.setupServer();
         serverObject.serverLoop();

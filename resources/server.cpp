@@ -13,31 +13,11 @@ void Server::setListeningPort( int port ) {
 }
 
 void Server::setListeningAddress( const std::string& listeningAddress ) {
-    static const int LONGEST_POSSIBLE_IPV4 = 15;
-    std::vector<std::string> octets;
-
-    // Check Input Address
-    if( countChar(listeningAddress, '.') != 3) {
-        throw ServerException("Error: listening address can only have three periods", 0);
+    if( validIPv4Listening(listeningAddress) ) {
+        this->listenAddr = listeningAddress;
+    } else {
+        throw ServerException(std::format("ServerException: Invalid IPv4 listening address passed ({})", listeningAddress));
     }
-
-    if( listeningAddress.size() > LONGEST_POSSIBLE_IPV4 ) {
-        throw ServerException("Error: listening address was longer than expected", 0);
-    }
-
-    for( char chr : listeningAddress ) {
-        if( ! isdigit(chr) && (chr != '.') ) {
-            throw ServerException("Error: IPv4 address expects only numeric types", 0);
-        }
-    }
-
-    octets = split( listeningAddress , '.' );
-    for( std::string octet : octets ) {
-        if( std::stoi(octet) > 255 ) {
-            throw ServerException("Error: An octet exceeds the valid range of an IP address", 0);
-        }
-    }
-    this->listenAddr = listeningAddress;
     return;
 }
 
@@ -113,30 +93,36 @@ void Server::serverLoop()
     std::cout << this->serverSocket << std::endl;
 
     cv::Mat image = cv::imread("../image.jpg", cv::IMREAD_COLOR);
-    for (;;)
-    {
-        int clientSocket;
-        char buffer[1024] = {0};
+    try {
 
-        // Listen for Incoming Connections
-        listen(serverSocket, 5);
-        clientSocket = accept(serverSocket, nullptr, nullptr);
-
-        // Read an image from the camera or file
-        if (image.empty())
+        for (;;)
         {
-            std::cerr << "Error: Could not read the image." << std::endl;
-            close(clientSocket);
-            continue;
+            int clientSocket;
+            char buffer[1024] = {0};
+            
+            // Listen for Incoming Connections
+            listen(serverSocket, 5);
+            clientSocket = accept(serverSocket, nullptr, nullptr);
+            
+            // Read an image from the camera or file
+            if (image.empty())
+            {
+                std::cerr << "Error: Could not read the image." << std::endl;
+                close(clientSocket);
+                continue;
+            }
+            
+            // DEBUG: Display the image in a window
+            // cv::imshow("Server Image Display", image);
+            // cv::waitKey(1); // Allow the window to refresh
+            
+            std::thread thr(&Server::client_handle, this, clientSocket);
+            thr.detach(); // Detach the thread to allow it to run independently
         }
-
-        // DEBUG: Display the image in a window
-        // cv::imshow("Server Image Display", image);
-        // cv::waitKey(1); // Allow the window to refresh
-
-        std::thread thr(&Server::client_handle, this, clientSocket);
-        thr.detach(); // Detach the thread to allow it to run independently
     }
+    catch(ServerException& exc) {
+        std::cerr << "Server Exception: " << exc.what() << std::endl;
+    }    
     return;
 }
 
@@ -215,6 +201,8 @@ void Server::client_handle(int client_socket)
     std::cout << recvRequest["frames"][0] << recvRequest["frames"][1] << recvRequest["frames"][2] << std::endl;
 
     this->state = REQ_STAGE;
+
+    // img = cv::imread("/home/coltond/Documents/SeniorDesignWS/build");
 
     // Process Image into frames, store frames in resultant_imgs
     imageProc( img, filters,  resultant_imgs );

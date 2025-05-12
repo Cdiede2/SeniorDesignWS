@@ -203,6 +203,21 @@ TEST(STRING_MANIP_SPLIT, Non_Empty_String_All_Delim)
     EXPECT_EQ(output.at(0), "");
 }
 
+TEST(STRING_MANIP_SPLIT, Numeric) {
+    std::string str{".192.168.137.110."};
+    std::vector<std::string> output;
+    output = split(str, '.');
+
+    EXPECT_EQ( output.size(), 4 );
+
+    // EXPECT_EQ(output.at(0),"");
+    EXPECT_EQ(output.at(0),"192");
+    EXPECT_EQ(output.at(1),"168");
+    EXPECT_EQ(output.at(2),"137");
+    EXPECT_EQ(output.at(3),"110");
+    // EXPECT_EQ(output.at(5),"");
+}
+
 /* String Manipulation Functions: countChar() */
 TEST(CountChar, CountChar_Empty)
 {
@@ -234,6 +249,47 @@ TEST(CountChar, CountChar_Non_Empty_Delim)
 
     std::string ip_addr{"127.0.0.1."};
     EXPECT_EQ(countChar(ip_addr, '.'), 4);
+}
+
+
+/* Tests Valid IPv4 Function */
+TEST(ValidIPv4, ValidIPv4) {
+    EXPECT_TRUE( validIPv4("1.1.1.1") );
+    EXPECT_TRUE( validIPv4("10.22.22.22") );
+    EXPECT_TRUE( validIPv4("192.168.137.1") );
+    EXPECT_TRUE( validIPv4("192.168.137.110") );
+    EXPECT_EQ( validIPv4("192.168.137.1"),  3232270593 );
+}
+
+TEST(ValidIPv4, Malformed_Input) {
+    EXPECT_FALSE( validIPv4("") );
+    EXPECT_FALSE( validIPv4(".") );
+    EXPECT_FALSE( validIPv4("...") );
+    EXPECT_FALSE( validIPv4(" . . . ") );
+    EXPECT_FALSE( validIPv4(". . . ") );
+    EXPECT_FALSE( validIPv4(" . . .") );
+    EXPECT_FALSE( validIPv4(" . . . .") );
+    EXPECT_FALSE( validIPv4("192 168 137 100") );
+    EXPECT_FALSE( validIPv4(" 192 168 137 100") );
+    EXPECT_FALSE( validIPv4("192..168137.1") );   
+}
+
+TEST(ValidIPv4, Invalid_Octets) {
+    EXPECT_FALSE( validIPv4("1.1.1") );
+    EXPECT_FALSE( validIPv4("1.1.1.1.1") );
+    EXPECT_FALSE( validIPv4(".192.168.1.1") );
+    EXPECT_FALSE( validIPv4("192.168.1.1.") );
+    EXPECT_FALSE( validIPv4("123.456.789.101") );
+}
+
+TEST(ValidIPv4, Listening_Address) {
+    EXPECT_TRUE( validIPv4Listening("0.0.0.0") );
+
+    EXPECT_TRUE( validIPv4("127.0.0.0") );
+    EXPECT_TRUE( validIPv4Listening("127.0.0.0") );
+
+    EXPECT_TRUE( validIPv4("192.168.137.0") );
+    EXPECT_TRUE( validIPv4Listening("192.168.137.0") );
 }
 
 /* Tests of MD5 Hashing Algorithm */
@@ -360,6 +416,8 @@ TEST(JSON, SF_JSON_Serialization)
     // std::cout << "Serialized JSON: " << j.dump(2) << std::endl;
 }
 
+
+
 /* Test Client Code */
 TEST(Client, Init)
 {
@@ -377,8 +435,13 @@ TEST(Client_Client, Input_Validation_Server_Address_Simple)
 {
     Client test;
 
+    EXPECT_TRUE( validIPv4("127.0.0.1") );
     EXPECT_NO_THROW(test.setServerAddress("127.0.0.1"));
+
+    EXPECT_TRUE( validIPv4("192.168.1.1") );
     EXPECT_NO_THROW(test.setServerAddress("192.168.1.1"));
+
+    EXPECT_FALSE( validIPv4("0.0.0.0") );
     EXPECT_ANY_THROW(test.setServerAddress("0.0.0.0"));
 }
 
@@ -421,8 +484,8 @@ TEST(Client_setServerPort, Valid_Addresses)
 TEST(Client_setServerPort, Invalid_Addresses)
 {
     Client clientObject;
-    EXPECT_ANY_THROW( clientObject.setServerPort(-1) );
-    EXPECT_ANY_THROW( clientObject.setServerPort(65536) );
+    EXPECT_ANY_THROW(clientObject.setServerPort(-1));
+    EXPECT_ANY_THROW(clientObject.setServerPort(65536));
 }
 
 /* Utility Functions */
