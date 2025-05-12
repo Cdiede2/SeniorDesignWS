@@ -74,24 +74,25 @@ void Client::sendRequestSrv() {
 
 cv::Mat Client::recvFrames() {
     size_t buffer_size(0);
+    size_t bytes_expected(0);
+    size_t bytes_received(0);
+
     std::vector<uchar> buffer;
     cv::Mat img;
 
     // Receive Buffer Size and Reshape
     recv(this->clientSocket, &buffer_size, sizeof(size_t), 0);
     buffer.resize(buffer_size);
-    recv(this->clientSocket, buffer.data(), buffer_size, 0);
+    bytes_expected = buffer_size;
+    while( bytes_received < bytes_expected ) {
+        bytes_received += recv(this->clientSocket, buffer.data() + bytes_received, buffer_size - bytes_received, 0);
+    }
 
     // Image Received in Full
     send(clientSocket, reinterpret_cast<const char*>("OK"), sizeof(10), 0);
 
     // Decode Image
-    cv::Mat raw( 1, buffer.size(), CV_8UC1, (void*)buffer.data() );
-    img = cv::imdecode(raw, cv::IMREAD_ANYCOLOR);
-    std::cout << std::format("Image Dim ({},{})", img.rows, img.cols) << std::endl;
-    
-    // cv::imshow("Image", img);
-    // cv::waitKey(0);
+    img = cv::imdecode(buffer, cv::IMREAD_COLOR);
     return img;
 }
 

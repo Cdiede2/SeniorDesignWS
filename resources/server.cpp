@@ -183,7 +183,7 @@ void Server::client_handle(int client_socket) {
     // Retrieve Camera Frame
     cv::Mat img = getCameraFrame();
     size_t img_buff_size(0);
-    cv::imencode( ".png", img, imgBuff );
+    cv::imencode( ".jpg", img, imgBuff );
     img_buff_size = imgBuff.size();
 
 
@@ -198,23 +198,6 @@ void Server::client_handle(int client_socket) {
 
     close(client_socket);
     return;
-    
-    
-    
-    
-    // std::vector<uchar> buffer;
-    // size_t size;
-
-    // // Read Image from File
-    // cv::Mat img = cv::imread("../assets/default.png");
-
-    // cv::imencode(".png", img, buffer);
-    
-    // size = buffer.size();
-
-    // send(client_socket, &size, sizeof(size_t), 0);
-    // send(client_socket, buffer.data(), size, 0);
-    // std::cout << "Image Sent" << std::endl;
 }
 
 
