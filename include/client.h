@@ -12,7 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-
+#include <array>
 #include "camera.h"
 
 /** TODO List: Client

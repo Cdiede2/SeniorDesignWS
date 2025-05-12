@@ -108,9 +108,13 @@ std::vector<cv::Mat> Client::recvFrames() {
         imgs.push_back( cv::imdecode(buffer, cv::IMREAD_COLOR) );
     }
 
+    int i = 0;
+    std::array<std::string,3> arr{"blue_frame","green_frame","red_frame"};
     for( auto val : imgs ) {
         cv::imshow("Frame", val);
+        cv::imwrite( std::format("{}.png", arr.at(i)), val );
         cv::waitKey(0);
+        i++;
     }
     return imgs;
 }

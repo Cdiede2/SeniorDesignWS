@@ -160,6 +160,12 @@ cv::Mat Server::getCameraFrame()
     return filtered;
 }
 
+/**
+ * @brief Handle Client connections to the server.
+ * @details Process the client's request, generate the desired output,
+ *          and send over sockets back to the user the requested data.
+ * @return Nothing
+ */
 void Server::client_handle(int client_socket) {
     std::string buffer;
     nlohmann::json request;
@@ -225,153 +231,16 @@ void Server::client_handle(int client_socket) {
     }
     std::cout << "--------------------" << std::endl;
 
-    
-    
-
     ///////////
     // std::vector<std::pair<cv::Mat, std::string>> frames;
     // imageProc(  )
-
-
     close(client_socket);
     return;
 }
 
 
 
-/**
- * @brief Handle Client connections to the server.
- * @details Process the client's request, generate the desired output,
- *          and send over sockets back to the user the requested data.
- * @return Nothing
- */
-/*
- void Server::client_handle(int client_socket)
-{
-    char buffer[1024] = {0};
-    // cv::Mat img = cv::imread("../image.jpg", cv::IMREAD_COLOR);
 
-    cv::Mat img;
-    nlohmann::json recvRequest;
-
-    std::string hash;
-    std::string str_buffer;
-
-    size_t sizeV(0);
-    std::vector<std::pair<cv::Mat, std::string>> resultant_imgs;
-
-    std::vector<Filter> filters;
-
-    // Receive Client Request, Parse JSON to retrieve desired color filters
-    recv(client_socket, buffer, sizeof(buffer), 0);
-    str_buffer = std::string(buffer);
-
-    std::cout << std::format("\e[104m{}\e[0m\n", str_buffer);
-
-    recvRequest = nlohmann::json::parse(str_buffer.begin(), str_buffer.end());
-    hash = recvRequest["hash"];
-    recvRequest.erase("hash");
-
-    // Validate Request HASH. On mismatch, network error may have occurred.
-    if (hash != md5(recvRequest.dump().c_str()))
-    {
-        std::cout << "Hash Mismatch" << std::endl;
-    }
-    else
-    {
-        std::cout << "Checksums match!" << std::endl;
-    }
-
-    // Retrieve Filters from JSON
-    filters = buildFilterArray( recvRequest );
-
-    std::cout << "Filters: \n" << filters << std::endl;
-    std::cout << "String Buffer: " << recvRequest << std::endl;
-    std::cout << recvRequest["frames"][0] << recvRequest["frames"][1] << recvRequest["frames"][2] << std::endl;
-
-    this->state = REQ_STAGE;
-
-    // img = cv::imread("/home/coltond/Documents/SeniorDesignWS/build");
-
-    ////
-    // Process Image into frames, store frames in resultant_imgs
-    try {
-        img = getCameraFrame();
-        imageProc( img, filters,  resultant_imgs );
-        std::cout << "\e[103mSuccessfully processed image\e[0m" << std::endl;
-
-    } catch( ServerException& exc ) {
-        std::cerr << "Server Error: " << exc.what() << std::endl;
-        img = cv::imread("../assets/default.png");
-        // img = cv::imread("../assets/image.jpg");
-
-        resultant_imgs.emplace_back( img, getImageHash(img) );
-        std::cout << "\e[105mEncountered Error in Image processing\e[0m" << std::endl;
-        // close(client_socket);
-        // return;
-    }
-
-
-    int frame_id = 1;
-    for( auto pair : resultant_imgs ) {
-        std::cout << "MD5 Hash: " << pair.second << std::endl;
-    }
-
-    // Does not work on unconfigured WSL
-    // Check: https://askubuntu.com/questions/1405903/capturing-webcam-video-with-opencv-in-wsl2
-    // getCameraFrame();
-
-    ////
-    // Receive Client Hello
-    // recv(client_socket, buffer, sizeof(buffer), 0);
-
-    // Header Includes Number of Frames and JSON frame to Saturation Color
-    nlohmann::json header{
-        {"im_width", img.cols},
-        {"im_height", img.rows},
-        {"im_depth", 3},
-        {"sat_color", SatColor::RED}};
-
-    send(client_socket, header.dump().c_str(), header.dump().size(), 0);
-    std::cout << "Serialized JSON Send" << std::endl;
-
-    // Only execute below code if IMG is NOT empty
-    if (!img.empty())
-    {
-        // Create Buffer and Size variables
-        std::vector<uchar> buff;
-        size_t size;
-
-        // Encode the Image in some format
-        cv::imencode(".png", img, buff);
-        cv::imshow("Testing PNG", img);
-
-        cv::imencode(".bmp", img, buff);
-        cv::imshow("Testing BMP", img);
-
-        cv::imencode(".jpg", img, buff);
-        cv::imshow("Testing JPG", img);
-
-        size = buff.size();
-        
-
-        std::cout << "Image Size (bytes): " << size << std::endl;
-        
-        
-        // FIRST: Send client the compressed image buffer size
-        // Second: Send the entire compressed image data over socket
-        std::cout << "Image: " << std::endl;
-        std::cout << "Image Size: " << img.size() << std::endl;
-        std::cout << "Image Rows: " << img.rows << std::endl;
-        std::cout << "Image Cols: " << img.cols << std::endl;
-        
-        send(client_socket, &size, sizeof(size_t), 0);
-        send(client_socket, buff.data(), buff.size(), 0);
-    }
-
-    close(client_socket);
-}
-*/
 
 /**
  * @brief Split Image into frames and compute MD5 hash for each frame, individually.
