@@ -7,8 +7,10 @@
 #include <iomanip>
 #include <format>
 #include <openssl/evp.h>
-
-
+#include <nlohmann/json.hpp>
+#include <opencv4/opencv2/core.hpp>
+#include <opencv4/opencv2/imgproc.hpp>
+#include <opencv4/opencv2/highgui.hpp>
 
 struct ClientException
 {
@@ -52,6 +54,10 @@ enum SatColor
     BLUE
 };
 
+
+bool checkHashJSON( nlohmann::json, std::string="" );
+
+std::string getImageHash( cv::Mat& );
 
 uint32_t validIPv4( const std::string& );
 

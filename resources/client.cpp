@@ -48,10 +48,58 @@ void Client::connectToServer()
     this->state = REQ_STAGE;
 }
 
+void Client::sendRequestSrv() {
+    nlohmann::json request;
+    size_t requestSize(0);
+    
+    // Form Request
+    request["state"] = "request";
+    request["id"] = 0;
+    request["frames"] = {SatColor::RED, SatColor::GREEN, SatColor::BLUE};
+    request["hash"] = md5( request.dump().c_str() );
+    requestSize = request.dump().size();
+    
+    // Send Buffer Size and Request
+    send(clientSocket, &requestSize, sizeof(size_t), 0);
+    send(clientSocket, request.dump().data(), requestSize, 0 );
+
+    cv::Mat img;
+    img = recvFrames();
+   
+    // recvFrames();
+    cv::imshow("Image", img);
+    cv::waitKey(0);
+    return;
+}
+
+cv::Mat Client::recvFrames() {
+    size_t buffer_size(0);
+    std::vector<uchar> buffer;
+    cv::Mat img;
+
+    // Receive Buffer Size and Reshape
+    recv(this->clientSocket, &buffer_size, sizeof(size_t), 0);
+    buffer.resize(buffer_size);
+    recv(this->clientSocket, buffer.data(), buffer_size, 0);
+
+    // Image Received in Full
+    send(clientSocket, reinterpret_cast<const char*>("OK"), sizeof(10), 0);
+
+    // Decode Image
+    cv::Mat raw( 1, buffer.size(), CV_8UC1, (void*)buffer.data() );
+    img = cv::imdecode(raw, cv::IMREAD_ANYCOLOR);
+    std::cout << std::format("Image Dim ({},{})", img.rows, img.cols) << std::endl;
+    
+    // cv::imshow("Image", img);
+    // cv::waitKey(0);
+    return img;
+}
+
+
 /**
  * @brief Send a request containing desired frames to server
  */
-void Client::sendRequestSrv()
+/*void Client::sendRequestSrv()
 {
     char buffer[1024] = {'\0'};
     cv::Mat img;
@@ -93,7 +141,7 @@ void Client::sendRequestSrv()
 
     //// Client Receives JSON header indicating number of frames to be sent
     // Request Sent, wait for FIN response indicating last packet/frame
-    send(clientSocket, reinterpret_cast<const char *>("Client HELO"), 20, 0);
+    // send(clientSocket, reinterpret_cast<const char *>("Client HELO"), 20, 0);
     recv(clientSocket, buffer, sizeof(buffer), 0);
 
     // Try to receive Image frame from server
@@ -113,17 +161,35 @@ void Client::sendRequestSrv()
         //// Client Receives SINGLE Image here
         // Receive data into buffer on client, decode into cv::Mat object
         recv(clientSocket, mem_buffer.data(), buff_size, 0);
-        img = cv::imdecode(mem_buffer, cv::IMREAD_COLOR);
+        
+        std::cout << "Size: " << mem_buffer.size() << std::endl;        
+        img = cv::imdecode(mem_buffer, cv::IMREAD_UNCHANGED);
+        
+        // DEBUG: Remove
+        std::cout << "Image: " << std::endl;
+        std::cout << "Image Size: " << img.size() << std::endl;
+        std::cout << "Image Rows: " << img.rows << std::endl;
+        std::cout << "Image Cols: " << img.cols << std::endl;
+
+
+        cv::imshow("Image Debug", img);
+        cv::waitKey(0);
+
+        // img = cv::imread("../assets/default.png");
 
         // Check that IMG is NOT empty, if it is throw an error
         std::cout << "Mem Buffer Size: " << mem_buffer.size() << std::endl;
         if (img.empty())
         {
             std::cerr << "Error: Image element is empty" << std::endl;
+            throw ClientException("Error: Image element is empty");
         }
 
         // Display Image
-        cv::imshow("Image demo", img);
+        std::cout << "Image: " << img << std::endl;
+
+        // cv::imshow("Image demo", img);
+        // cv::imwrite("output.jpg", img);
         cv::waitKey(0);
     }
     catch (nlohmann::json::parse_error &err)
@@ -136,7 +202,8 @@ void Client::sendRequestSrv()
     {
         std::cerr << "STND::ERROR: " << exc.what() << std::endl;
     }
-}
+}*/
+
 
 /////////////////////////////////////
 // Accessors

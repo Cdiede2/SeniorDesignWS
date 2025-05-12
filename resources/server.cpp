@@ -27,7 +27,7 @@ std::string Server::getListeningAddress() const {
 }
 
 int Server::getListeningPort() const {
-    return this->serverPort;
+    return this->server_sin.sin_port;
 }
 
 /**
@@ -83,18 +83,19 @@ void Server::setupServer()
  */
 void Server::serverLoop()
 {
+    // If Server Not Setup, Don't run
     if (this->state != RDY_STAGE)
     {
         throw std::runtime_error("Server is not in the ready state to start the loop.");
     }
 
     // Main Server Loop
-    std::cout << std::format("Server Listening on: {}", ntohs( this->server_sin.sin_port) ) << std::endl;
-    std::cout << this->serverSocket << std::endl;
-
-    cv::Mat image = cv::imread("../image.jpg", cv::IMREAD_COLOR);
+    std::cout << std::format("Server Listening on: {}\n", ntohs(this->server_sin.sin_port) );
+    std::cout << std::format("Server Socket: {}\n", this->serverSocket);
+    std::cout << "-----------------------------\n";
+    
     try {
-
+        // Run Server Indefinitely
         for (;;)
         {
             int clientSocket;
@@ -104,18 +105,7 @@ void Server::serverLoop()
             listen(serverSocket, 5);
             clientSocket = accept(serverSocket, nullptr, nullptr);
             
-            // Read an image from the camera or file
-            if (image.empty())
-            {
-                std::cerr << "Error: Could not read the image." << std::endl;
-                close(clientSocket);
-                continue;
-            }
-            
-            // DEBUG: Display the image in a window
-            // cv::imshow("Server Image Display", image);
-            // cv::waitKey(1); // Allow the window to refresh
-            
+            // Create and Detach thread
             std::thread thr(&Server::client_handle, this, clientSocket);
             thr.detach(); // Detach the thread to allow it to run independently
         }
@@ -138,26 +128,96 @@ cv::Mat Server::getCameraFrame()
     auto cap = cv::VideoCapture(0);
     if (!cap.isOpened())
     {
-        throw ServerException({"Camera::ERROR: Could not open media", 1});
-    }
 
-    // Read Image and Filter
-    cap.read(img);
-    cap.release();
-    cv::bilateralFilter(img, filtered, 50, 25, 25);
+        // Camera failed to open, send default.png
+        img = cv::imread("../assets/default.png");
+        std::cerr << "Could not open Camera Feed" << std::endl;
+        if( img.empty() ) throw ServerException("Could not open default image", 0);
+        return img;
+        // throw ServerException({"Camera::ERROR: Could not open media", 1});
+    } else {
 
-    if (img.empty())
-    {
-        std::cerr << "Camera::FAILURE: Camera was read, but no media was created" << std::endl;
-        throw ServerException("Camera::ERROR: Camera was read, but no media was created", 0);
+        // Read Image and Filter
+        cap.read(img);
+        cap.release();
+        cv::bilateralFilter(img, filtered, 50, 25, 25);
+
+        // Camera opened, but no image could be read
+        if( img.empty() ) {
+            img = cv::imread("../assets/default.png");
+            std::cerr << "Could not read frame from camera" << std::endl;
+            if( img.empty() ) throw ServerException("Could not open default image", 0);
+            return img;
+
+        // Image Read, but filtered could not be produced
+        } else if( filtered.empty() ){
+            img = cv::imread("../assets/default.png");
+            std::cerr << "Could not product filtered frame" << std::endl;
+            if( img.empty() ) throw ServerException("Could not open default image", 0);
+            return img;
+        }
     }
-    else if (filtered.empty())
-    {
-        throw ServerException("Camera::ERROR: Filtered Image is empty.", 0);
-    }
-    std::cout << "Camera::SUCCESS: Successfully, pulled image from camera" << std::endl;
     return filtered;
 }
+
+void Server::client_handle(int client_socket) {
+    std::string buffer;
+    nlohmann::json request;
+    std::vector<uchar> imgBuff;
+    size_t buffer_size(0);
+    
+    // Receive Request Size First, then receive request
+    recv(client_socket, &buffer_size, sizeof(size_t), 0);
+    buffer.resize(buffer_size);
+    recv(client_socket, buffer.data(), buffer_size, 0);
+    
+    // Parse Request, check integrity, and check for correct state
+    request = nlohmann::json::parse( buffer.begin(), buffer.end() );
+    if( ! checkHashJSON(request) ) {
+        throw ServerException("JSON hash incorrect");
+    }
+    if( request["state"] != "request" ) {
+        throw ServerException("Client not in request state");
+    }
+
+    // Retrieve Camera Frame
+    cv::Mat img = getCameraFrame();
+    size_t img_buff_size(0);
+    cv::imencode( ".png", img, imgBuff );
+    img_buff_size = imgBuff.size();
+
+
+    // Send Image to Client
+    send(client_socket, &img_buff_size, sizeof(size_t), 0);
+    send(client_socket, imgBuff.data(), img_buff_size, 0);
+    
+
+    buffer.resize(10);
+    recv(client_socket, buffer.data(), sizeof(10), 0);
+    std::cout << "Received: " << buffer << std::endl;
+
+    close(client_socket);
+    return;
+    
+    
+    
+    
+    // std::vector<uchar> buffer;
+    // size_t size;
+
+    // // Read Image from File
+    // cv::Mat img = cv::imread("../assets/default.png");
+
+    // cv::imencode(".png", img, buffer);
+    
+    // size = buffer.size();
+
+    // send(client_socket, &size, sizeof(size_t), 0);
+    // send(client_socket, buffer.data(), size, 0);
+    // std::cout << "Image Sent" << std::endl;
+}
+
+
 
 /**
  * @brief Handle Client connections to the server.
@@ -165,21 +225,29 @@ cv::Mat Server::getCameraFrame()
  *          and send over sockets back to the user the requested data.
  * @return Nothing
  */
-void Server::client_handle(int client_socket)
+/*
+ void Server::client_handle(int client_socket)
 {
     char buffer[1024] = {0};
     // cv::Mat img = cv::imread("../image.jpg", cv::IMREAD_COLOR);
+
     cv::Mat img;
     nlohmann::json recvRequest;
+
     std::string hash;
     std::string str_buffer;
+
     size_t sizeV(0);
     std::vector<std::pair<cv::Mat, std::string>> resultant_imgs;
+
     std::vector<Filter> filters;
 
     // Receive Client Request, Parse JSON to retrieve desired color filters
     recv(client_socket, buffer, sizeof(buffer), 0);
-    str_buffer = buffer;
+    str_buffer = std::string(buffer);
+
+    std::cout << std::format("\e[104m{}\e[0m\n", str_buffer);
+
     recvRequest = nlohmann::json::parse(str_buffer.begin(), str_buffer.end());
     hash = recvRequest["hash"];
     recvRequest.erase("hash");
@@ -210,10 +278,17 @@ void Server::client_handle(int client_socket)
     try {
         img = getCameraFrame();
         imageProc( img, filters,  resultant_imgs );
+        std::cout << "\e[103mSuccessfully processed image\e[0m" << std::endl;
+
     } catch( ServerException& exc ) {
         std::cerr << "Server Error: " << exc.what() << std::endl;
-        close(client_socket);
-        return;
+        img = cv::imread("../assets/default.png");
+        // img = cv::imread("../assets/image.jpg");
+
+        resultant_imgs.emplace_back( img, getImageHash(img) );
+        std::cout << "\e[105mEncountered Error in Image processing\e[0m" << std::endl;
+        // close(client_socket);
+        // return;
     }
 
 
@@ -228,7 +303,7 @@ void Server::client_handle(int client_socket)
 
     ////
     // Receive Client Hello
-    recv(client_socket, buffer, sizeof(buffer), 0);
+    // recv(client_socket, buffer, sizeof(buffer), 0);
 
     // Header Includes Number of Frames and JSON frame to Saturation Color
     nlohmann::json header{
@@ -249,18 +324,34 @@ void Server::client_handle(int client_socket)
 
         // Encode the Image in some format
         cv::imencode(".png", img, buff);
+        cv::imshow("Testing PNG", img);
+
+        cv::imencode(".bmp", img, buff);
+        cv::imshow("Testing BMP", img);
+
+        cv::imencode(".jpg", img, buff);
+        cv::imshow("Testing JPG", img);
+
         size = buff.size();
+        
 
         std::cout << "Image Size (bytes): " << size << std::endl;
-
+        
+        
         // FIRST: Send client the compressed image buffer size
         // Second: Send the entire compressed image data over socket
+        std::cout << "Image: " << std::endl;
+        std::cout << "Image Size: " << img.size() << std::endl;
+        std::cout << "Image Rows: " << img.rows << std::endl;
+        std::cout << "Image Cols: " << img.cols << std::endl;
+        
         send(client_socket, &size, sizeof(size_t), 0);
         send(client_socket, buff.data(), buff.size(), 0);
     }
 
     close(client_socket);
 }
+*/
 
 /**
  * @brief Split Image into frames and compute MD5 hash for each frame, individually.

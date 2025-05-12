@@ -1,5 +1,32 @@
 #include "camera.h"
 
+bool checkHashJSON( nlohmann::json input, std::string hash ) {
+    std::string resultMD5;
+    std::string expected;
+
+    // If 'hash' field inside input, remove
+    if( input.contains("hash") ) {
+        expected = input.at("hash"); 
+        input.erase("hash");
+
+        // Compute MD5 Hash of input
+        resultMD5 = md5( input.dump() );
+        return (resultMD5 == expected);
+
+    // If 'hash' field is missing, use hash provided in parameter list
+    } else {
+        resultMD5 = md5( input.dump() );
+        return (resultMD5 == hash);
+    }
+    return false;
+}
+
+std::string getImageHash( cv::Mat& img ) {
+    std::vector<uchar> buffer;
+    cv::imencode(".png", img, buffer);
+    return md5({reinterpret_cast<const char*>(buffer.data())});
+}
+
 uint32_t validIPv4(const std::string &ipAddress)
 {
     std::vector<std::string> octets;

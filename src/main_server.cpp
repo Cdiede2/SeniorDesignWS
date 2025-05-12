@@ -51,9 +51,9 @@ int main(int argc, char **argv)
 
     try
     {
-    std::cout << "Server Listening Address: " << serverObject.getListeningAddress() << std::endl;
-    std::cout << "Server Listening Port: " << serverObject.getListeningPort() << std::endl;
-    // return RETURN_OK;
+        std::cout << "Server Listening Address: " << serverObject.getListeningAddress() << std::endl;
+        std::cout << "Server Listening Port: " << serverObject.getListeningPort() << std::endl;
+        // return RETURN_OK;
 
     
         // Run Server Code

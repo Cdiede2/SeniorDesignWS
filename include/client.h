@@ -54,8 +54,10 @@ public:
     
     // Mutators
     void connectToServer();
+
     void sendRequestSrv();
-    void recvFromsrv();
+    cv::Mat recvFrames();
+    
     void setServerPort(int socket);
     void setServerAddress(const std::string&);
 

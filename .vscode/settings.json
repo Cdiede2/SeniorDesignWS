@@ -69,7 +69,9 @@
         "codecvt": "cpp",
         "forward_list": "cpp",
         "ranges": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "chrono": "cpp",
+        "list": "cpp"
     },
     "editor.experimentalGpuAcceleration": "off",
     "github.copilot.enable": {
